@@ -1,7 +1,7 @@
 {
-  "name": "crypto-signals",
+  "name": "trading-signal-tracker",
   "version": "1.0.0",
-  "description": "Telegram bot for trading signals",
+  "description": "Telegram bot that monitors trading signals in real-time. Parses trade setups from messages, tracks price movements via WebSocket, and sends instant notifications when Entry, TP or SL levels are hit. Built with NestJS, DDD, and Hexagonal Architecture.",
   "main": "dist/main.js",
   "scripts": {
     "build": "nest build",
@@ -18,7 +18,7 @@
     "lint": "eslint \"{src,test}/**/*.ts\"",
     "lint:fix": "eslint \"{src,test}/**/*.ts\" --fix",
     "typecheck": "tsc --noEmit",
-    "prepare": "npm run lint:fix && npm run typecheck && npm run test:cov",
+    "prepare": "husky install",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\""
   },
   "dependencies": {
@@ -64,6 +64,7 @@
     "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-prettier": "^5.0.0",
     "fast-check": "^4.8.0",
+    "husky": "^9.1.7",
     "jest": "^30.4.2",
     "prettier": "^3.0.0",
     "supertest": "^7.2.2",

@@ -10,7 +10,7 @@ export class CleanDatabaseHandler implements ICommandHandler<CleanDatabaseComman
     @Inject(TRADE_PORT_TOKEN) private readonly repository: TradePort,
   ) {}
 
-  async execute(command: CleanDatabaseCommand): Promise<CommandResponse> {
+  async execute(_command: CleanDatabaseCommand): Promise<CommandResponse> {
     const deletedCount = await this.repository.deleteAll();
 
     return {

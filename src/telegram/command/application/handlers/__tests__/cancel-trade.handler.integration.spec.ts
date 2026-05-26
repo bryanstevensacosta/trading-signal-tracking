@@ -13,6 +13,7 @@ class MockTradeRepository implements TradePort {
   findPending = jest.fn();
   update = jest.fn();
   delete = jest.fn();
+  deleteAll = jest.fn();
 }
 
 describe('CancelTradeHandler (integration)', () => {

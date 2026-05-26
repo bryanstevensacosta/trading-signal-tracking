@@ -7,6 +7,7 @@ export interface TradePort {
   findPending(): Promise<import('@trade/shared').Trade[]>;
   update(id: string, input: unknown): Promise<import('@trade/shared').Trade | null>;
   delete(id: string): Promise<boolean>;
+  deleteAll(): Promise<number>;
 }
 
 export interface TradeStats {

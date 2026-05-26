@@ -7,7 +7,7 @@ import { TradeEntity } from '@trade/repository/infrastructure/persistence/trade.
  */
 export const databaseConfig: TypeOrmModuleOptions = {
   type: 'better-sqlite3',
-  database: process.env.DB_PATH || 'crypto-signals.db',
+  database: process.env.DB_PATH || 'trading-signal-tracker.db',
   entities: [TradeEntity],
   synchronize: true,
   logging: ['error', 'warn'],
