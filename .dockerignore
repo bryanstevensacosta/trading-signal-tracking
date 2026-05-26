@@ -42,7 +42,6 @@ opencode.json
 .eslintrc.js
 jest.config.js
 jest-e2e.config.js
-tsconfig.json
 nest-cli.json
 .dependency-cruiser.js
 
