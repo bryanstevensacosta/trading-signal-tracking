@@ -12,6 +12,7 @@ import { ModifyTPHandler } from './modify-tp.handler';
 import { CloseTradeHandler } from './close-trade.handler';
 import { MoveToBreakevenHandler } from './move-to-breakeven.handler';
 import { ForceOpenHandler } from './force-open.handler';
+import { CleanDatabaseHandler } from './clean-database.handler';
 
 export {
   StartHandler,
@@ -28,4 +29,5 @@ export {
   CloseTradeHandler,
   MoveToBreakevenHandler,
   ForceOpenHandler,
+  CleanDatabaseHandler,
 };

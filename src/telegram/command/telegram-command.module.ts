@@ -26,6 +26,7 @@ import {
   CloseTradeHandler,
   MoveToBreakevenHandler,
   ForceOpenHandler,
+  CleanDatabaseHandler,
 } from './application/handlers';
 
 const CommandHandlers = [
@@ -43,6 +44,7 @@ const CommandHandlers = [
   CloseTradeHandler,
   MoveToBreakevenHandler,
   ForceOpenHandler,
+  CleanDatabaseHandler,
 ];
 
 @Module({

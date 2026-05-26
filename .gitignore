@@ -17,6 +17,8 @@ npm-debug.log*
 *.db
 *.db-shm
 *.db-wal
+data/*
+!data/.gitkeep
 
 # IDE
 .idea/

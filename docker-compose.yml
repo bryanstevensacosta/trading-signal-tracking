@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: crypto-signals
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3015}:${PORT:-3015}"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - NODE_ENV=production
+      - PORT=${PORT:-3015}
+      - DB_PATH=/app/data/crypto-signals.db
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+    env_file:
+      - .env

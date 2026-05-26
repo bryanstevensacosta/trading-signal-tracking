@@ -1,0 +1,51 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+
+# Build
+dist/
+coverage/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Database
+*.db
+*.db-shm
+*.db-wal
+
+# Logs
+*.log
+app.log
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Docs
+docs/
+AGENTS.md
+
+# Config files
+opencode.json
+.eslintrc.js
+jest.config.js
+jest-e2e.config.js
+tsconfig.json
+nest-cli.json
+.dependency-cruiser.js
+
+# Tests
+test/
+__tests__/
