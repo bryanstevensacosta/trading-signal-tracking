@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+
+# Build
+dist/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Database
+*.db
+*.db-shm
+*.db-wal
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Coverage
+coverage/
+coverage-e2e/
+
+# Opencode
+.opencode/
+
+# Dependency cruiser
+.dependency-cruiser.js

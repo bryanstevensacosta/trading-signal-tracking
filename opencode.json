@@ -1,0 +1,11 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "command": {
+    "prepare": {
+      "description": "Prepare project - lint fix, typecheck, test with 80%+ coverage, enforce hexagonal architecture",
+      "agent": "build",
+      "model": "opencode-go/minimax-m2.7",
+      "template": "Run a full project preparation cycle to ensure code quality and architectural compliance.\n\n## Steps to execute:\n\n### 1. Lint with auto-fix\nExecute: `npm run lint`\nThis fixes most linting errors automatically. Review any errors that could not be fixed.\n\n### 2. TypeScript type checking\nExecute: `tsc --noEmit`\nReport all TypeScript errors found. For each error:\n- Identify the file and line number\n- Explain what type safety issue exists\n- Suggest how to fix it\n\n### 3. Architecture boundary check\nExecute: `npx depcruise src --config .dependency-cruiser.js`\nThis validates that hexagonal architecture rules are not violated:\n- Domain must NOT import Infrastructure or Application\n- Application must NOT import Infrastructure\n- Cross-bounded-context imports should use ports/adapters pattern\n\nFor any violations:\n- Report which layer is importing what\n- Explain why this violates the architecture\n- Suggest how to refactor using ports (interfaces in domain) and adapters (in infrastructure)\n\n### 4. Run all tests with coverage\nExecute: `npm run test:cov`\nThe coverage threshold is now 80% for branches, functions, lines, and statements.\n\nIf coverage is below 80%:\n- Identify which files/modules have lowest coverage\n- Suggest which areas need more test cases\n- DO NOT automatically increase the threshold to avoid the requirement\n\n### 5. Final report\nAfter all steps, provide a summary:\n- **Lint**: X errors fixed, Y errors remaining\n- **TypeScript**: X errors found (list them)\n- **Architecture**: X violations found (list them with file paths)\n- **Tests**: X passed, Y failed, Z% coverage (meets/does not meet 80% threshold)\n\nIf there are errors in any category, ask if you should proceed to fix them."
+    }
+  }
+}
