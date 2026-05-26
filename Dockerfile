@@ -14,7 +14,9 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-RUN addgroup -g 1001 -S nodejs && adduser -S nestjs -u 1001
+RUN addgroup -g 1001 -S nodejs && adduser -S nestjs -u 1001 && \
+    mkdir -p /app/data /app/logs && \
+    chown -R nestjs:nodejs /app
 
 COPY package*.json ./
 RUN npm ci --omit=dev --legacy-peer-deps --ignore-scripts && npm cache clean --force
