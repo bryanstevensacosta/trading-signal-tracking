@@ -20,7 +20,7 @@ jobs:
           key: ${{ secrets.DO_SSH_KEY }}
           port: 22
           script: |
-            cd /app/trading-signal-tracking
+            cd /opt/trading-signal-tracking
             git pull origin master
             mkdir -p data
             docker compose up -d --build
