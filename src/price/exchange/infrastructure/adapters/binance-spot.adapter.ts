@@ -3,6 +3,7 @@ import { BinanceSpotPort } from '../../domain/ports/binance-spot.port';
 import { ExchangeConfig } from '../../domain/value-objects/exchange-config.vo';
 import { Price, MarketType } from '@trade/shared';
 import { LoggerPort, LOGGER_PORT } from '@shared';
+import { WebSocket } from 'ws';
 import {
   ExchangeConnectionError,
   SymbolNotFoundError,
@@ -256,9 +257,10 @@ export class BinanceSpotAdapter implements BinanceSpotPort, OnModuleInit, OnModu
       this.startPingInterval();
     };
 
-    this.ws.onmessage = (event) => {
+    this.ws.onmessage = (event: any) => {
       try {
-        const message = JSON.parse(event.data);
+        const data = event.data;
+        const message = typeof data === 'string' ? JSON.parse(data) : JSON.parse(data.toString('utf8'));
         this.logger.debug(`[BinanceSpot] Raw WS message: ${JSON.stringify(message).substring(0, 200)}`);
         this.handleMessage(message);
       } catch (e) {
