@@ -22,6 +22,7 @@ import {
   CloseTradeCommand,
   MoveToBreakevenCommand,
   ForceOpenCommand,
+  CleanDatabaseCommand,
 } from '../../application/commands/mutation';
 import { IngestMessageCommand } from '@trade/ingestion/application/commands/ingest-message/command';
 import { MessageSourceVO } from '@trade/ingestion/domain/value-objects/message-source.vo';
@@ -85,6 +86,7 @@ export class TelegramBotAdapter implements OnModuleInit {
       { command: 'be', description: 'Move to breakeven (Usage: /be <trade_id>)' },
       { command: 'open', description: 'Force open a trade (Usage: /open <trade_id>)' },
       { command: 'trade', description: 'Get trade by ID (Usage: /trade <trade_id>)' },
+      { command: 'clean', description: 'Delete all trades from database' },
     ];
 
     try {
@@ -263,6 +265,13 @@ export class TelegramBotAdapter implements OnModuleInit {
 
       const result = await this.commandBus.execute(
         new GetTradeByIdCommand(tradeId),
+      ) as CommandResponse;
+      await this.safeReply(ctx, result.message);
+    });
+
+    this.bot.command('clean', async (ctx) => {
+      const result = await this.commandBus.execute(
+        new CleanDatabaseCommand(ctx.chat.id),
       ) as CommandResponse;
       await this.safeReply(ctx, result.message);
     });
