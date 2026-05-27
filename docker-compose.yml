@@ -8,7 +8,7 @@ services:
     ports:
       - "${PORT:-3015}:${PORT:-3015}"
     volumes:
-      - ./data:/app/data
+      - /opt/trading-signal-tracking/data:/app/data
     environment:
       - NODE_ENV=production
       - PORT=${PORT:-3015}
@@ -16,4 +16,4 @@ services:
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
     env_file:
-      - .env
+      - /opt/trading-signal-tracking/.env
