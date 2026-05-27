@@ -22,6 +22,7 @@ export class TradeDisplayService {
     prices: Price[],
     page: number = 1,
     pageSize: number = 10,
+    showId: boolean = false,
   ): PaginatedTradeList {
     if (trades.length === 0) {
       return {
@@ -37,8 +38,8 @@ export class TradeDisplayService {
     const activeTrades = trades.filter(t => this.isActive(t.status));
     const closedTrades = trades.filter(t => this.isClosed(t.status));
 
-    const activeDisplay = activeTrades.map(t => this.formatTradeFull(t, priceMap.get(t.symbol)));
-    const closedDisplay = closedTrades.map(t => this.formatTradeFull(t, priceMap.get(t.symbol), true));
+    const activeDisplay = activeTrades.map(t => this.formatTradeFull(t, priceMap.get(t.symbol), false, showId));
+    const closedDisplay = closedTrades.map(t => this.formatTradeFull(t, priceMap.get(t.symbol), true, showId));
 
     const allTrades = [...activeDisplay, ...closedDisplay];
     const total = allTrades.length;
@@ -63,16 +64,18 @@ export class TradeDisplayService {
     trade: Trade,
     price: Price | undefined,
     _compact: boolean = false,
+    showId: boolean = false,
   ): string {
     const sideEmoji = trade.side === TradeSide.LONG ? '🟢' : trade.side === TradeSide.SHORT ? '🔴' : '⚪';
     const statusEmoji = this.getStatusEmoji(trade.status);
     const statusText = this.getStatusText(trade.status);
-    const id = this.formatId(trade.id);
 
     const lines: string[] = [];
 
     lines.push(`${sideEmoji} ${trade.side} ${trade.symbol} ${statusEmoji} ${statusText}`);
-    lines.push(`   ID: ${id}`);
+    if (showId) {
+      lines.push(`   ID: ${this.formatId(trade.id)}`);
+    }
 
     if (trade.status === 'pending') {
       lines.push(`   @ <code>${trade.entry}</code>${trade.entryMax ? `-${trade.entryMax}` : ''}`);

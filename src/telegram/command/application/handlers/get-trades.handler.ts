@@ -45,6 +45,7 @@ export class GetTradesHandler implements ICommandHandler<GetTradesCommand> {
       prices,
       command.page,
       10,
+      true,
     );
 
     return {
