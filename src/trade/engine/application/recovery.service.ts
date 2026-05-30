@@ -97,9 +97,26 @@ export class RecoveryService {
           `Trade ${trade.id} (${trade.symbol}): ${result.trigger} trigger detected at ${result.price}`,
         );
 
+        // Update status based on trigger type
+        if (result.trigger === TriggerType.SL) {
+          await this.tradeRepository.update(trade.id, {
+            status: TradeStatus.CLOSED_LOSS,
+            closedAt: new Date(),
+          });
+          this.logger.info(`[Recovery] Closed trade ${trade.id} as LOSS`);
+        } else if (result.trigger === TriggerType.TP) {
+          await this.tradeRepository.update(trade.id, {
+            status: TradeStatus.CLOSED_WIN,
+            tpsHit: [result.tpIndex!],
+            closedAt: new Date(),
+          });
+          this.logger.info(`[Recovery] Closed trade ${trade.id} as WIN`);
+        }
+
+        const updatedTrade = await this.tradeRepository.findById(trade.id);
         await this.eventBus.publish(
           new TriggerDetectedEvent(
-            trade,
+            updatedTrade!,
             result.trigger,
             result.price,
             result.rr,
