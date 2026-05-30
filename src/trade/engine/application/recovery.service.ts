@@ -4,11 +4,23 @@ import { Trade, OrderType, TradeSide, TriggerType } from '@trade/shared';
 import { TradeRepositoryPort, TRADE_REPOSITORY_PORT } from '../../repository/domain/ports/trade-repository.port';
 import { PriceStreamService, MarketType as StreamMarketType } from '@price/stream/domain/services/price-stream.service';
 import { TriggerDetectorService, TriggerResult } from '../domain/services/trigger-detector.service';
+import { TriggerDetectedEvent } from '../domain/events/trigger-detected.event';
 import { LoggerPort, LOGGER_PORT } from '../../../shared/domain/ports/logger.port';
+
+interface Kline {
+  openTime: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+  closeTime: number;
+}
 
 /**
  * Service responsible for recovering missed triggers on application startup.
  * Uses historical klines to check if price touched entry while server was down.
+ * When a trigger is detected, publishes TriggerDetectedEvent for processing.
  */
 @Injectable()
 export class RecoveryService {
@@ -26,9 +38,9 @@ export class RecoveryService {
   }
 
   /**
-   * Recovers missed entry triggers for all pending LIMIT orders.
-   * Uses klines historical data to check if price touched entry while server was down.
-   * Called on application startup to check for triggers that should have fired.
+   * Recovers missed triggers for all pending/active trades.
+   * Uses klines historical data to check if price touched entry/TP/SL while server was down.
+   * When triggers are detected, publishes events for processing.
    */
   async recoverMissedTriggers(): Promise<Map<string, TriggerResult>> {
     const results = new Map<string, TriggerResult>();
@@ -38,17 +50,49 @@ export class RecoveryService {
     this.logger.info(`Checking ${pendingTrades.length} pending trades for missed triggers`);
 
     for (const trade of pendingTrades) {
-      if (trade.status !== 'pending') {
-        continue;
-      }
-
       const result = await this.checkTradeForMissedTriggers(trade);
 
-      if (result.triggered) {
+      if (result.triggered && result.trigger && result.price != null) {
         results.set(trade.id, result);
         this.logger.info(
           `Trade ${trade.id} (${trade.symbol}): ${result.trigger} trigger detected at ${result.price}`,
         );
+
+        await this.eventBus.publish(
+          new TriggerDetectedEvent(
+            trade,
+            result.trigger,
+            result.price,
+            result.rr,
+            result.tpIndex,
+            result.lastTpIndex,
+          ),
+        );
+        this.logger.info(`[Recovery] Published TriggerDetectedEvent for trade ${trade.id}`);
+      }
+    }
+
+    const activeTrades = await this.tradeRepository.findByStatus('active');
+    for (const trade of activeTrades) {
+      const result = await this.checkActiveTradeForMissedTriggers(trade);
+
+      if (result.triggered && result.trigger && result.price != null) {
+        results.set(trade.id, result);
+        this.logger.info(
+          `Trade ${trade.id} (${trade.symbol}): ${result.trigger} trigger detected at ${result.price}`,
+        );
+
+        await this.eventBus.publish(
+          new TriggerDetectedEvent(
+            trade,
+            result.trigger,
+            result.price,
+            result.rr,
+            result.tpIndex,
+            result.lastTpIndex,
+          ),
+        );
+        this.logger.info(`[Recovery] Published TriggerDetectedEvent for trade ${trade.id}`);
       }
     }
 
@@ -57,9 +101,13 @@ export class RecoveryService {
   }
 
   /**
-   * Checks a single trade for any missed triggers using klines.
+   * Checks a pending trade for entry trigger using klines.
    */
   private async checkTradeForMissedTriggers(trade: Trade): Promise<TriggerResult> {
+    if (trade.status !== 'pending') {
+      return { triggered: false };
+    }
+
     if (trade.orderType !== OrderType.LIMIT) {
       return { triggered: false };
     }
@@ -69,9 +117,8 @@ export class RecoveryService {
     }
 
     const marketType = trade.side === TradeSide.SPOT ? 'spot' : 'futures';
-    // Use lastSeenTimestamp if available, otherwise use createdAt
-    const startTime = trade.lastSeenTimestamp 
-      ? trade.lastSeenTimestamp.getTime() 
+    const startTime = trade.lastSeenTimestamp
+      ? trade.lastSeenTimestamp.getTime()
       : trade.createdAt.getTime();
     const now = Date.now();
     const endTime = now;
@@ -85,7 +132,7 @@ export class RecoveryService {
         '1m',
         startTime,
         endTime,
-        1440 // max 24 hours
+        1440
       );
 
       if (!klines || klines.length === 0) {
@@ -103,25 +150,53 @@ export class RecoveryService {
   }
 
   /**
-   * Checks klines data for entry hit.
-   * LONG/SPOT: Activates if price went DOWN to entry (low <= entry)
-   * SHORT: Activates if price went UP to entry (high >= entry)
+   * Checks an active trade for TP/SL triggers using klines.
    */
-  private checkKlinesForEntryHit(trade: Trade, klines: Array<{
-    openTime: number;
-    open: number;
-    high: number;
-    low: number;
-    close: number;
-    volume: number;
-    closeTime: number;
-  }>): TriggerResult {
+  private async checkActiveTradeForMissedTriggers(trade: Trade): Promise<TriggerResult> {
+    if (trade.status !== 'active' && trade.status !== 'partial_tp') {
+      return { triggered: false };
+    }
+
+    if (!trade.entryExecutedAt) {
+      return { triggered: false };
+    }
+
+    const marketType = trade.side === TradeSide.SPOT ? 'spot' : 'futures';
+    const startTime = trade.lastSeenTimestamp
+      ? trade.lastSeenTimestamp.getTime()
+      : trade.createdAt.getTime();
+    const now = Date.now();
+    const endTime = now;
+
+    try {
+      const klines = await this.priceStream.getKlines(
+        trade.symbol,
+        marketType as StreamMarketType,
+        '1m',
+        startTime,
+        endTime,
+        1440
+      );
+
+      if (!klines || klines.length === 0) {
+        return { triggered: false };
+      }
+
+      return this.checkKlinesForTPAndSLHit(trade, klines);
+    } catch (error) {
+      this.logger.error(`Failed to get klines for ${trade.symbol}: ${error}`);
+      return { triggered: false };
+    }
+  }
+
+  /**
+   * Checks klines data for entry hit.
+   */
+  private checkKlinesForEntryHit(trade: Trade, klines: Kline[]): TriggerResult {
     const entry = trade.entry;
 
     for (const candle of klines) {
       if (trade.side === TradeSide.LONG || trade.side === TradeSide.SPOT) {
-        // LONG/SPOT: Entry se activa cuando el precio BAJA hasta la entrada
-        // Verificamos si el low de la vela tocó o bajó de la entrada
         if (candle.low <= entry) {
           this.logger.info(
             `[Recovery] LONG/SPOT ${trade.symbol}: Entry hit at ${entry} (candle low: ${candle.low})`
@@ -133,8 +208,6 @@ export class RecoveryService {
           };
         }
       } else if (trade.side === TradeSide.SHORT) {
-        // SHORT: Entry se activa cuando el precio SUBE hasta la entrada
-        // Verificamos si el high de la vela tocó o subió de la entrada
         if (candle.high >= entry) {
           this.logger.info(
             `[Recovery] SHORT ${trade.symbol}: Entry hit at ${entry} (candle high: ${candle.high})`
@@ -143,6 +216,56 @@ export class RecoveryService {
             triggered: true,
             trigger: TriggerType.ENTRY,
             price: entry,
+          };
+        }
+      }
+    }
+
+    return { triggered: false };
+  }
+
+  /**
+   * Checks klines data for TP and SL hits.
+   */
+  private checkKlinesForTPAndSLHit(trade: Trade, klines: Kline[]): TriggerResult {
+    const isLongOrSpot = trade.side === TradeSide.LONG || trade.side === TradeSide.SPOT;
+
+    for (let i = 0; i < klines.length; i++) {
+      const candle = klines[i];
+
+      if (trade.tps && trade.tps.length > 0) {
+        for (let tpIndex = 0; tpIndex < trade.tps.length; tpIndex++) {
+          const tp = trade.tps[tpIndex];
+          if (trade.tpsHit?.includes(tpIndex)) continue;
+
+          const isTpHit = isLongOrSpot
+            ? candle.high >= tp
+            : candle.low <= tp;
+
+          if (isTpHit) {
+            this.logger.info(`[Recovery] ${trade.symbol}: TP${tpIndex + 1} hit at ${tp}`);
+            return {
+              triggered: true,
+              trigger: TriggerType.TP,
+              price: tp,
+              tpIndex,
+            };
+          }
+        }
+      }
+
+      if (trade.sl) {
+        const isSlHit = isLongOrSpot
+          ? candle.low <= trade.sl
+          : candle.high >= trade.sl;
+
+        if (isSlHit) {
+          this.logger.info(`[Recovery] ${trade.symbol}: SL hit at ${trade.sl}`);
+          return {
+            triggered: true,
+            trigger: TriggerType.SL,
+            price: trade.sl,
+            rr: -1,
           };
         }
       }
