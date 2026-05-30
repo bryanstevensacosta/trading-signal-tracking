@@ -12,6 +12,8 @@ import { TradeStatus } from '@trade/shared';
 import { getTelegramConfig } from '@config/telegram.config';
 import { TradeListService } from '@telegram/notification/trade-list/domain/services/trade-list.service';
 import { PRICE_CACHE_PORT, PriceCachePort } from '@price/cache/domain/ports/price-cache.port';
+import { TELEGRAM_NOTIFICATION_LOG_PORT, TelegramNotificationLogPort } from '../../../../shared/domain/ports/telegram-notification-log.port';
+import { NotificationType, NotificationChannel } from '../../../../shared/domain/entities/telegram-notification-log.entity';
 
 @CommandHandler(ApproveTradeCommand)
 export class ApproveTradeHandler implements ICommandHandler<ApproveTradeCommand> {
@@ -26,6 +28,7 @@ export class ApproveTradeHandler implements ICommandHandler<ApproveTradeCommand>
     private readonly notificationTemplates: TradeAlertService,
     private readonly displayService: TradeListService,
     @Inject(PRICE_CACHE_PORT) private readonly priceCache: PriceCachePort,
+    @Inject(TELEGRAM_NOTIFICATION_LOG_PORT) private readonly notificationLog: TelegramNotificationLogPort,
   ) {
     this.logger = logger;
   }
@@ -58,7 +61,16 @@ export class ApproveTradeHandler implements ICommandHandler<ApproveTradeCommand>
     const newTradeMessage = this.notificationTemplates.formatTradeCreated(trade);
     this.logger.debug(`Sending NEW TRADE to group ${telegramConfig.groupId} with threadId=${telegramConfig.singleTradeThreadId}:\n${newTradeMessage}`);
     const newTradeMessageId = await this.telegram.sendMessage(telegramConfig.groupId, newTradeMessage, undefined, telegramConfig.singleTradeThreadId);
-    await this.repository.update(command.tradeId, { notificationMessageId: newTradeMessageId });
+    if (newTradeMessageId && newTradeMessageId > 0) {
+      await this.repository.update(command.tradeId, { notificationMessageId: newTradeMessageId });
+      await this.notificationLog.logSent({
+        tradeId: trade.id,
+        type: NotificationType.APPROVED,
+        channel: NotificationChannel.ALERTS,
+        messageId: newTradeMessageId,
+        chatId: telegramConfig.groupId?.toString(),
+      });
+    }
 
     const allTrades = await this.repository.findAll();
     const symbols = [...new Set(allTrades.map(t => t.symbol))];

@@ -17,6 +17,7 @@ import { PriceCacheModule } from '@price/cache/price-cache.module';
 import { PriceExchangeModule } from '@price/exchange/price-exchange.module';
 import { LoggerModule } from '@shared';
 import { TelegramCoreModule } from '@telegram/core/telegram-core.module';
+import { TelegramNotificationSharedModule } from '../shared/telegram-notification-shared.module';
 
 export const COMMAND_HANDLERS = [
   SendConfirmationHandler,
@@ -37,6 +38,7 @@ export const COMMAND_HANDLERS = [
     forwardRef(() => PriceCacheModule),
     PriceExchangeModule,
     forwardRef(() => TelegramCoreModule),
+    TelegramNotificationSharedModule,
   ],
   providers: [
     BinanceInfoService,

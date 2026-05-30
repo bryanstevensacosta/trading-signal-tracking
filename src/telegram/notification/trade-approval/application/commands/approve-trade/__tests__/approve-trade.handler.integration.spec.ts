@@ -88,6 +88,13 @@ describe('ApproveTradeHandler (integration)', () => {
       getBySymbols: jest.fn().mockReturnValue([]),
     };
 
+    const mockNotificationLog = {
+      logSent: jest.fn(),
+      wasSent: jest.fn().mockResolvedValue(false),
+      getLastSent: jest.fn().mockResolvedValue(null),
+      getForTrade: jest.fn().mockResolvedValue([]),
+    };
+
     handler = new ApproveTradeHandler(
       mockLogger,
       mockRepository as any,
@@ -97,6 +104,7 @@ describe('ApproveTradeHandler (integration)', () => {
       mockNotificationTemplates as any,
       mockDisplayService as any,
       mockPriceCache as any,
+      mockNotificationLog as any,
     );
   });
 

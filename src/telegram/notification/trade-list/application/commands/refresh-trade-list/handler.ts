@@ -5,6 +5,8 @@ import { TradeListService } from '../../../domain/services/trade-list.service';
 import { TradeListCacheService } from '../../../domain/services/trade-list-cache.service';
 import { TELEGRAM_PORT, TelegramPort } from '@telegram/core';
 import { PRICE_CACHE_PORT, PriceCachePort } from '@price/cache/domain/ports/price-cache.port';
+import { TELEGRAM_NOTIFICATION_LOG_PORT, TelegramNotificationLogPort } from '../../../../shared/domain/ports/telegram-notification-log.port';
+import { NotificationType, NotificationChannel } from '../../../../shared/domain/entities/telegram-notification-log.entity';
 import { Inject, forwardRef } from '@nestjs/common';
 import { getTelegramConfig } from '@config/telegram.config';
 
@@ -20,6 +22,7 @@ export class RefreshTradeListHandler
     private readonly displayService: TradeListService,
     private readonly cache: TradeListCacheService,
     @Inject(TELEGRAM_PORT) private readonly telegram: TelegramPort,
+    @Inject(TELEGRAM_NOTIFICATION_LOG_PORT) private readonly notificationLog: TelegramNotificationLogPort,
   ) {}
 
   async execute(command: RefreshTradeListCommand): Promise<void> {
@@ -38,6 +41,16 @@ export class RefreshTradeListHandler
       undefined,
       telegramConfig.tradeListThreadId,
     );
-    this.cache.set(command.chatId, messageId, trades);
+    
+    if (messageId && messageId > 0) {
+      this.cache.set(command.chatId, messageId, trades);
+      
+      await this.notificationLog.logSent({
+        type: NotificationType.TRADE_LIST,
+        channel: NotificationChannel.LIST,
+        messageId,
+        chatId: command.chatId?.toString(),
+      });
+    }
   }
 }

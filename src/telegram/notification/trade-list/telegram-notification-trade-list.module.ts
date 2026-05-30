@@ -12,6 +12,7 @@ import { TradeListNotifierAdapterProvider } from './infrastructure/adapters/trad
 import { PriceCacheModule } from '@price/cache/price-cache.module';
 import { LoggerModule } from '@shared';
 import { TelegramCoreModule } from '@telegram/core/telegram-core.module';
+import { TelegramNotificationSharedModule } from '../shared/telegram-notification-shared.module';
 
 const CommandHandlers = [SendTradeListHandler, RefreshTradeListHandler];
 const EventHandlers = [OnTradeListRefreshHandler];
@@ -24,6 +25,7 @@ const EventHandlers = [OnTradeListRefreshHandler];
     forwardRef(() => PriceCacheModule),
     LoggerModule,
     forwardRef(() => TelegramCoreModule),
+    TelegramNotificationSharedModule,
   ],
   providers: [
     TradeListService,

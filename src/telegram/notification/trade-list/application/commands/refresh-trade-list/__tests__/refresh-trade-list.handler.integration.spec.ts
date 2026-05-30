@@ -58,6 +58,13 @@ describe('RefreshTradeListHandler (unit)', () => {
       getBySymbols: jest.fn().mockReturnValue([]),
     };
 
+    const mockNotificationLog = {
+      logSent: jest.fn(),
+      wasSent: jest.fn().mockResolvedValue(false),
+      getLastSent: jest.fn().mockResolvedValue(null),
+      getForTrade: jest.fn().mockResolvedValue([]),
+    };
+
     const displayService = new TradeListService();
     cache = new TradeListCacheService();
 
@@ -66,7 +73,8 @@ describe('RefreshTradeListHandler (unit)', () => {
       mockPriceCache as any,
       displayService,
       cache,
-      mockTelegram as any
+      mockTelegram as any,
+      mockNotificationLog as any,
     );
   });
 
