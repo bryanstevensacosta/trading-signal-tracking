@@ -1,10 +1,11 @@
 import { Injectable, Inject, forwardRef } from '@nestjs/common';
-import { EventBus } from '@nestjs/cqrs';
-import { Trade, OrderType, TradeSide, TriggerType } from '@trade/shared';
+import { EventBus, CommandBus } from '@nestjs/cqrs';
+import { Trade, OrderType, TradeSide, TriggerType, TradeStatus } from '@trade/shared';
 import { TradeRepositoryPort, TRADE_REPOSITORY_PORT } from '../../repository/domain/ports/trade-repository.port';
 import { PriceStreamService, MarketType as StreamMarketType } from '@price/stream/domain/services/price-stream.service';
 import { TriggerDetectorService, TriggerResult } from '../domain/services/trigger-detector.service';
 import { TriggerDetectedEvent } from '../domain/events/trigger-detected.event';
+import { TransitionStateCommand } from '@trade/state/application/commands/transition-state.command';
 import { LoggerPort, LOGGER_PORT } from '../../../shared/domain/ports/logger.port';
 
 interface Kline {
@@ -32,6 +33,7 @@ export class RecoveryService {
     private readonly priceStream: PriceStreamService,
     private readonly triggerDetector: TriggerDetectorService,
     private readonly eventBus: EventBus,
+    private readonly commandBus: CommandBus,
     @Inject(LOGGER_PORT) logger: LoggerPort,
   ) {
     this.logger = logger;
@@ -61,17 +63,39 @@ export class RecoveryService {
         const freshTrade = await this.tradeRepository.findById(trade.id);
         this.logger.info(`[Recovery] Trade ${trade.id} current status before event: ${freshTrade?.status}`);
 
-        await this.eventBus.publish(
-          new TriggerDetectedEvent(
-            freshTrade!,
-            result.trigger,
-            result.price,
-            result.rr,
-            result.tpIndex,
-            result.lastTpIndex,
-          ),
+        // Execute state transition directly
+        if (result.trigger === TriggerType.ENTRY) {
+          await this.tradeRepository.update(trade.id, {
+            entryExecutedPrice: result.price,
+            entryExecutedAt: new Date(),
+          });
+          await this.commandBus.execute(
+            new TransitionStateCommand(trade.id, TradeStatus.ACTIVE, 'entry_triggered')
+          );
+          this.logger.info(`[Recovery] Entry triggered - transitioned trade ${trade.id} to ACTIVE`);
+        } else if (result.trigger === TriggerType.TP) {
+          const tpsHit = [result.tpIndex!];
+          await this.commandBus.execute(
+            new TransitionStateCommand(trade.id, TradeStatus.CLOSED_WIN, 'all_tp_hit', { tpsHit })
+          );
+          this.logger.info(`[Recovery] TP triggered - closed trade ${trade.id} as WIN`);
+        } else if (result.trigger === TriggerType.SL) {
+          await this.commandBus.execute(
+            new TransitionStateCommand(trade.id, TradeStatus.CLOSED_LOSS, 'sl_triggered', { rr: -1 })
+          );
+          this.logger.info(`[Recovery] SL triggered - closed trade ${trade.id} as LOSS`);
+        }
+
+        // Also publish event for notifications
+        const event = new TriggerDetectedEvent(
+          freshTrade!,
+          result.trigger,
+          result.price,
+          result.rr,
+          result.tpIndex,
+          result.lastTpIndex,
         );
-        this.logger.info(`[Recovery] Published TriggerDetectedEvent for trade ${trade.id}`);
+        await this.eventBus.publish(event);
       }
     }
 
