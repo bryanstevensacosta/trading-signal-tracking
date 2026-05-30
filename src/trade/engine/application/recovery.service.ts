@@ -76,6 +76,26 @@ export class RecoveryService {
             entryExecutedAt: existingEntryExecutedAt || new Date(),
           });
           this.logger.info(`[Recovery] Entry triggered - transitioned trade ${trade.id} to ACTIVE`);
+
+          // After activating, check if SL was already hit
+          const activeTrade = await this.tradeRepository.findById(trade.id);
+          if (activeTrade?.sl) {
+            const currentPrice = await this.priceStream.getCurrentPrice(trade.symbol, trade.side === TradeSide.SPOT ? 'spot' : 'futures');
+            if (currentPrice) {
+              const isLong = activeTrade.side === TradeSide.LONG || activeTrade.side === TradeSide.SPOT;
+              const priceForSl = isLong ? currentPrice.bid : currentPrice.ask;
+              const slHit = isLong ? priceForSl <= activeTrade.sl : priceForSl >= activeTrade.sl;
+              
+              if (slHit) {
+                this.logger.info(`[Recovery] SL already hit for trade ${trade.id}, closing...`);
+                await this.tradeRepository.update(trade.id, {
+                  status: TradeStatus.CLOSED_LOSS,
+                  closedAt: new Date(),
+                });
+                this.logger.info(`[Recovery] Trade ${trade.id} closed as LOSS`);
+              }
+            }
+          }
         } else if (result.trigger === TriggerType.TP) {
           await this.tradeRepository.update(trade.id, {
             status: TradeStatus.CLOSED_WIN,
