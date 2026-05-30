@@ -5,6 +5,7 @@ import { TradeSide } from '@trade/shared/types/trigger';
 import { TradeRepositoryPort, TRADE_REPOSITORY_PORT } from '../../../repository/domain/ports/trade-repository.port';
 import { PriceStreamService, MarketType } from '@price/stream/domain/services/price-stream.service';
 import { TriggerDetectorService } from './trigger-detector.service';
+import { RecoveryService } from '../../application/recovery.service';
 import { MonitoringStartedEvent, MonitoringStoppedEvent, TriggerDetectedEvent } from '../events';
 import { LoggerPort, LOGGER_PORT } from '../../../../shared/domain/ports/logger.port';
 
@@ -30,6 +31,7 @@ export class TradingEngineService implements OnModuleInit {
     @Inject(forwardRef(() => PriceStreamService))
     private readonly priceStream: PriceStreamService,
     private readonly triggerDetector: TriggerDetectorService,
+    private readonly recoveryService: RecoveryService,
     private readonly eventBus: EventBus,
     private readonly commandBus: CommandBus,
     @Inject(LOGGER_PORT) private readonly logger: LoggerPort,
@@ -200,40 +202,13 @@ export class TradingEngineService implements OnModuleInit {
 
   /**
    * On module init, recover any missed entry triggers for LIMIT orders.
-   * This handles the case where the app was restarted while LIMIT orders were pending.
+   * Uses klines historical data to check if price touched entry while server was down.
    */
   async onModuleInit(): Promise<void> {
-    await this.recoverMissedEntries();
+    this.logger.info('[TradingEngine] Starting recovery check for missed triggers...');
+    const results = await this.recoveryService.recoverMissedTriggers();
+    this.logger.info(`[TradingEngine] Recovery complete. ${results.size} triggers detected.`);
+    
     await this.startMonitoringAll();
-  }
-
-  private async recoverMissedEntries(): Promise<void> {
-    const pendingTrades = await this.repository.findPending();
-
-    for (const trade of pendingTrades) {
-      if (trade.orderType !== OrderType.LIMIT) {
-        continue;
-      }
-
-      if (trade.entryExecutedAt) {
-        continue;
-      }
-
-      const marketType = getMarketType(trade.side);
-      const price = await this.priceStream.getCurrentPrice(trade.symbol, marketType);
-      if (!price) {
-        continue;
-      }
-
-      const entryHit = this.triggerDetector.checkEntryHit(trade, price);
-
-      if (entryHit.triggered) {
-        await this.repository.update(trade.id, {
-          status: TradeStatus.ACTIVE,
-          entryExecutedAt: new Date(),
-          entryExecutedPrice: entryHit.price,
-        });
-      }
-    }
   }
 }

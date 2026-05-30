@@ -11,6 +11,7 @@ describe('TradingEngineService (property-based)', () => {
   let mockRepository: jest.Mocked<SqliteTradeAdapter>;
   let mockPriceStream: jest.Mocked<PriceStreamService>;
   let mockTriggerDetector: jest.Mocked<TriggerDetectorService>;
+  let mockRecoveryService: any;
   let mockEventBus: jest.Mocked<EventBus>;
   let mockCommandBus: jest.Mocked<CommandBus>;
   let mockLogger: any;
@@ -43,6 +44,10 @@ describe('TradingEngineService (property-based)', () => {
       checkAllTriggers: jest.fn(),
     } as any;
 
+    mockRecoveryService = {
+      recoverMissedTriggers: jest.fn().mockResolvedValue(new Map()),
+    } as any;
+
     mockEventBus = {
       publish: jest.fn(),
     } as any;
@@ -62,6 +67,7 @@ describe('TradingEngineService (property-based)', () => {
       mockRepository as any,
       mockPriceStream,
       mockTriggerDetector,
+      mockRecoveryService,
       mockEventBus,
       mockCommandBus,
       mockLogger,
