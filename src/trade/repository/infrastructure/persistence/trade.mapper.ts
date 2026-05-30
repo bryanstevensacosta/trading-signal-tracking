@@ -32,6 +32,8 @@ export class TradeMapper {
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,
       closedAt: entity.closedAt,
+      cancelledBy: entity.cancelledBy as Trade['cancelledBy'],
+      approvedAt: entity.approvedAt || null,
     };
   }
 
@@ -60,6 +62,8 @@ export class TradeMapper {
       sourceMessage: trade.sourceMessage,
       sourceChat: trade.sourceChat ? trade.sourceChat.toString() : null,
       closedAt: trade.closedAt,
+      cancelledBy: trade.cancelledBy || null,
+      approvedAt: trade.approvedAt || null,
     };
   }
 

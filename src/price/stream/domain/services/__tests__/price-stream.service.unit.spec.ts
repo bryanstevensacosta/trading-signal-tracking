@@ -29,7 +29,7 @@ describe('PriceStreamService', () => {
       symbolExists: jest.fn().mockResolvedValue(true),
     };
 
-    service = new PriceStreamService(mockAdapter as any, { publish: mockPublish } as any);
+    service = new PriceStreamService(mockAdapter as any, mockAdapter as any, { publish: mockPublish } as any);
   });
 
   afterEach(() => {

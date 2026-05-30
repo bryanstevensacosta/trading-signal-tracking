@@ -3,7 +3,7 @@ import { BinanceFuturesPort } from '../../domain/ports/binance-futures.port';
 import { ExchangeConfig } from '../../domain/value-objects/exchange-config.vo';
 import { Price, MarketType } from '@trade/shared';
 import { LoggerPort, LOGGER_PORT } from '@shared';
-import { WebSocket } from 'ws';
+import { WebSocket, MessageEvent } from 'ws';
 import {
   ExchangeConnectionError,
   SymbolNotFoundError,
@@ -327,7 +327,7 @@ export class BinanceFuturesAdapter implements BinanceFuturesPort, OnModuleInit, 
       this.startPingInterval();
     };
 
-    this.ws.onmessage = (event: any) => {
+    this.ws.onmessage = (event: MessageEvent) => {
       try {
         const data = event.data;
         const message = typeof data === 'string' ? JSON.parse(data) : JSON.parse(data.toString('utf8'));
@@ -361,7 +361,7 @@ export class BinanceFuturesAdapter implements BinanceFuturesPort, OnModuleInit, 
       this.sendMarkPriceSubscription();
     };
 
-    this.wsMarkPrice.onmessage = (event: any) => {
+    this.wsMarkPrice.onmessage = (event: MessageEvent) => {
       try {
         const data = event.data;
         const message = typeof data === 'string' ? JSON.parse(data) : JSON.parse(data.toString('utf8'));

@@ -93,4 +93,10 @@ export class TradeEntity {
 
   @Column({ type: 'datetime', nullable: true })
   closedAt: Date | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  cancelledBy: string | null;
+
+  @Column({ type: 'datetime', nullable: true })
+  approvedAt: Date | null;
 }

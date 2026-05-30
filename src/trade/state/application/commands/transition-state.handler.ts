@@ -94,6 +94,7 @@ export class TransitionStateHandler
         trade.status,
         command.targetStatus,
         command.reason || 'state_transition',
+        command.metadata?.rr,
       ),
     );
 

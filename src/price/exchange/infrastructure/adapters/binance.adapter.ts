@@ -1,7 +1,7 @@
 import { ExchangePort } from '../../domain/ports/exchange.port';
 import { ExchangeConfig, getExchangeConfig } from '../../domain/value-objects/exchange-config.vo';
 import { Price } from '@trade/shared';
-import { WebSocket } from 'ws';
+import { WebSocket, MessageEvent } from 'ws';
 import {
   ExchangeConnectionError,
   SymbolNotFoundError,
@@ -192,7 +192,7 @@ export class BinanceExchangeAdapter implements ExchangePort {
       this.startPingInterval();
     };
 
-    this.ws.onmessage = (event: any) => {
+    this.ws.onmessage = (event: MessageEvent) => {
       try {
         const data = event.data;
         const message = typeof data === 'string' ? JSON.parse(data) : JSON.parse(data.toString('utf8'));

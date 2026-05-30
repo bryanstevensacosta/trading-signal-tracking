@@ -1,1 +1,0 @@
-export * from './telegram-message.adapter';

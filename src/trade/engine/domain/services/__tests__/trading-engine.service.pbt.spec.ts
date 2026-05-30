@@ -110,7 +110,8 @@ describe('TradingEngineService (property-based)', () => {
 
       expect(mockPriceStream.subscribe).toHaveBeenCalledWith(
         'BTCUSDT',
-        expect.any(Function)
+        expect.any(Function),
+        'futures'
       );
     });
 
@@ -121,7 +122,8 @@ describe('TradingEngineService (property-based)', () => {
 
       expect(mockPriceStream.subscribe).toHaveBeenCalledWith(
         'BTCUSDT',
-        expect.any(Function)
+        expect.any(Function),
+        'futures'
       );
     });
   });
@@ -177,7 +179,7 @@ describe('TradingEngineService (property-based)', () => {
 
       await engine.startMonitoring(trade);
 
-      expect(engine.getMonitoredSymbols()).toContain('BTCUSDT');
+      expect(engine.getMonitoredSymbols()).toContain('BTCUSDT-futures');
     });
 
     it('should check if symbol is being monitored', async () => {

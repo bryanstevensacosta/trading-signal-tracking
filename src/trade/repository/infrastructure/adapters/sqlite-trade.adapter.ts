@@ -1,11 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { TradeRepositoryPort } from '../../domain/ports/trade-repository.port';
-import { Trade, CreateTradeInput, UpdateTradeInput, OrderType } from '@trade/shared';
+import { TradeRepositoryPort, TRADE_REPOSITORY_PORT } from '../../domain/ports/trade-repository.port';
+import { Trade, CreateTradeInput, UpdateTradeInput, OrderType, TradeStatus } from '@trade/shared';
 import { TradeEntity } from '../persistence/trade.entity';
 import { TradeMapper } from '../persistence/trade.mapper';
-import { TRADE_PORT_TOKEN } from '@telegram/command/domain/ports/trade.port';
 
 /**
  * SQLite adapter implementing TradeRepositoryPort.
@@ -17,7 +16,7 @@ export class SqliteTradeAdapter implements TradeRepositoryPort {
     private readonly repository: Repository<TradeEntity>,
   ) {}
 
-  static readonly TOKEN = TRADE_PORT_TOKEN;
+  static readonly TOKEN = TRADE_REPOSITORY_PORT;
 
   /**
    * Creates a new trade.
@@ -35,7 +34,7 @@ export class SqliteTradeAdapter implements TradeRepositoryPort {
       tps: input.tps ?? null,
       chartUrl: input.chartUrl ?? null,
       notes: input.notes ?? null,
-      status: 'pending' as any,
+      status: TradeStatus.PENDING,
       tpsHit: [],
       sourceMessage: input.sourceMessage ?? null,
       sourceChat: input.sourceChat?.toString() ?? null,
@@ -81,7 +80,7 @@ export class SqliteTradeAdapter implements TradeRepositoryPort {
    */
   async findPending(): Promise<Trade[]> {
     const entities = await this.repository.find({
-      where: { status: 'pending' as any },
+      where: { status: TradeStatus.PENDING },
       order: { createdAt: 'DESC' },
     });
     return entities.map(TradeMapper.toDomain);
@@ -92,7 +91,7 @@ export class SqliteTradeAdapter implements TradeRepositoryPort {
    */
   async findByStatus(status: string): Promise<Trade[]> {
     const entities = await this.repository.find({
-      where: { status: status as any },
+      where: { status: status as TradeStatus },
       order: { createdAt: 'DESC' },
     });
     return entities.map(TradeMapper.toDomain);
@@ -130,6 +129,7 @@ export class SqliteTradeAdapter implements TradeRepositoryPort {
     if (input.entryExecutedPrice !== undefined) updateData.entryExecutedPrice = input.entryExecutedPrice;
     if (input.entryExecutedAt !== undefined) updateData.entryExecutedAt = input.entryExecutedAt;
     if (input.notificationMessageId !== undefined) updateData.notificationMessageId = input.notificationMessageId;
+    if (input.approvedAt !== undefined) updateData.approvedAt = input.approvedAt;
 
     await this.repository.update(id, updateData);
     return this.findById(id);
@@ -147,7 +147,7 @@ export class SqliteTradeAdapter implements TradeRepositoryPort {
    * Deletes all trades.
    */
   async deleteAll(): Promise<number> {
-    const result = await this.repository.delete({});
+    const result = await this.repository.createQueryBuilder().delete().execute();
     return result.affected ?? 0;
   }
 }

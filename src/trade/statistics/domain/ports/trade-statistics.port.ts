@@ -1,4 +1,4 @@
-import { Trade } from '../../../shared/types';
+import { Trade, TradeStatus } from '../../../shared/types';
 
 export interface TradeStatistics {
   totalTrades: number;
@@ -19,7 +19,17 @@ export interface CalculateRROutput {
   pnl: number;
 }
 
+export interface TradeSummary {
+  wins: number;
+  losses: number;
+  total: number;
+  winRate: number;
+}
+
 export interface TradeStatisticsPort {
   calculateStatistics(trades: Trade[]): Promise<TradeStatistics>;
   calculateRR(trade: Trade): CalculateRROutput | null;
+  calculateTradeSummary(trades: Trade[]): TradeSummary;
+  isActiveTrade(status: TradeStatus): boolean;
+  isClosedTrade(status: TradeStatus): boolean;
 }

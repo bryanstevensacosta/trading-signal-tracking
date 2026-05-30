@@ -3,26 +3,31 @@ import { EventBus } from '@nestjs/cqrs';
 import { PriceStreamPort, SubscriptionInfo } from '../ports/price-stream.port';
 import { Price } from '@trade/shared';
 import { PriceUpdatedEvent } from '../events/price-updated.event';
-import { SPOT_PORT } from '@price/exchange/tokens';
+import { SPOT_PORT, FUTURES_PORT } from '@price/exchange/tokens';
 import type { BinanceSpotPort } from '@price/exchange/domain/ports/binance-spot.port';
+import type { BinanceFuturesPort } from '@price/exchange/domain/ports/binance-futures.port';
+
+export type MarketType = 'spot' | 'futures';
 
 @Injectable()
 export class PriceStreamService implements PriceStreamPort {
   private subscriptions: Map<string, SubscriptionInfo> = new Map();
 
   constructor(
-    @Inject(forwardRef(() => SPOT_PORT)) private readonly exchange: BinanceSpotPort,
+    @Inject(forwardRef(() => SPOT_PORT)) private readonly spotExchange: BinanceSpotPort,
+    @Inject(forwardRef(() => FUTURES_PORT)) private readonly futuresExchange: BinanceFuturesPort,
     private readonly eventBus: EventBus,
   ) {}
 
-  subscribe(symbol: string, callback: (price: Price) => void): SubscriptionInfo {
+  subscribe(symbol: string, callback: (price: Price) => void, marketType: MarketType = 'spot'): SubscriptionInfo {
     const upperSymbol = symbol.toUpperCase();
 
     if (this.subscriptions.has(upperSymbol)) {
       return this.subscriptions.get(upperSymbol)!;
     }
 
-    const unsubscribe = this.exchange.subscribeToTicker(upperSymbol, (price: Price) => {
+    const exchange = marketType === 'futures' ? this.futuresExchange : this.spotExchange;
+    const unsubscribe = exchange.subscribeToTicker(upperSymbol, (price: Price) => {
       this.handlePriceUpdate(price);
       callback(price);
     });
@@ -62,9 +67,10 @@ export class PriceStreamService implements PriceStreamPort {
     return this.subscriptions.has(symbol.toUpperCase());
   }
 
-  async getCurrentPrice(symbol: string): Promise<Price | null> {
+  async getCurrentPrice(symbol: string, marketType: MarketType = 'spot'): Promise<Price | null> {
     try {
-      return await this.exchange.getTicker(symbol);
+      const exchange = marketType === 'futures' ? this.futuresExchange : this.spotExchange;
+      return await exchange.getTicker(symbol);
     } catch {
       return null;
     }

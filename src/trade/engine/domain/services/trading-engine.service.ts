@@ -1,11 +1,16 @@
 import { Injectable, Inject, forwardRef, OnModuleInit } from '@nestjs/common';
 import { EventBus, CommandBus } from '@nestjs/cqrs';
 import { Trade, Price, OrderType, TradeStatus } from '@trade/shared';
+import { TradeSide } from '@trade/shared/types/trigger';
 import { TradeRepositoryPort, TRADE_REPOSITORY_PORT } from '../../../repository/domain/ports/trade-repository.port';
-import { PriceStreamService } from '@price/stream/domain/services/price-stream.service';
+import { PriceStreamService, MarketType } from '@price/stream/domain/services/price-stream.service';
 import { TriggerDetectorService } from './trigger-detector.service';
 import { MonitoringStartedEvent, MonitoringStoppedEvent, TriggerDetectedEvent } from '../events';
 import { LoggerPort, LOGGER_PORT } from '../../../../shared/domain/ports/logger.port';
+
+function getMarketType(side: TradeSide): MarketType {
+  return side === TradeSide.SPOT ? 'spot' : 'futures';
+}
 
 const MONITORED_STATUSES = ['pending', 'active', 'partial_tp', 'breakeven'];
 
@@ -35,15 +40,19 @@ export class TradingEngineService implements OnModuleInit {
    */
   async startMonitoring(trade: Trade): Promise<void> {
     const symbol = trade.symbol.toUpperCase();
+    const marketType = getMarketType(trade.side);
+    const subscriptionKey = `${symbol}-${marketType}`;
 
-    if (!this.monitoredSymbols.has(symbol)) {
+    this.logger.info(`[TradingEngine] startMonitoring: ${trade.id} (${symbol}) status=${trade.status}, side=${trade.side}, market=${marketType}`);
+
+    if (!this.monitoredSymbols.has(subscriptionKey)) {
       const callback = (price: Price) => {
-        this.onPriceUpdateForSymbol(symbol, price);
+        this.onPriceUpdateForSymbol(subscriptionKey, price, trade.side);
       };
 
-      this.priceCallbacks.set(symbol, callback);
-      this.priceStream.subscribe(symbol, callback);
-      this.monitoredSymbols.add(symbol);
+      this.priceCallbacks.set(subscriptionKey, callback);
+      this.priceStream.subscribe(symbol, callback, marketType);
+      this.monitoredSymbols.add(subscriptionKey);
     }
 
     this.eventBus.publish(new MonitoringStartedEvent(trade));
@@ -54,18 +63,20 @@ export class TradingEngineService implements OnModuleInit {
    */
   async stopMonitoring(trade: Trade, reason: string = 'stopped'): Promise<void> {
     const symbol = trade.symbol.toUpperCase();
+    const marketType = getMarketType(trade.side);
+    const subscriptionKey = `${symbol}-${marketType}`;
     const otherTrades = await this.repository.findBySymbol(symbol);
 
     const stillActive = otherTrades.filter(
-      t => t.id !== trade.id && MONITORED_STATUSES.includes(t.status)
+      t => t.id !== trade.id && MONITORED_STATUSES.includes(t.status) && getMarketType(t.side) === marketType
     );
 
     if (stillActive.length === 0) {
-      const callback = this.priceCallbacks.get(symbol);
+      const callback = this.priceCallbacks.get(subscriptionKey);
       if (callback) {
         this.priceStream.unsubscribe(symbol);
-        this.priceCallbacks.delete(symbol);
-        this.monitoredSymbols.delete(symbol);
+        this.priceCallbacks.delete(subscriptionKey);
+        this.monitoredSymbols.delete(subscriptionKey);
       }
     }
 
@@ -82,20 +93,34 @@ export class TradingEngineService implements OnModuleInit {
     ]);
 
     const allTrades = [...activeTrades, ...pendingTrades];
-    const symbols = [...new Set(allTrades.map(t => t.symbol.toUpperCase()))];
+    const symbolsAndMarkets = new Map<string, Set<MarketType>>();
 
-    this.logger.info(`[TradingEngine] startMonitoringAll: ${allTrades.length} trades (${symbols.length} unique symbols)`);
+    for (const trade of allTrades) {
+      const symbol = trade.symbol.toUpperCase();
+      const marketType = getMarketType(trade.side);
+      if (!symbolsAndMarkets.has(symbol)) {
+        symbolsAndMarkets.set(symbol, new Set());
+      }
+      symbolsAndMarkets.get(symbol)!.add(marketType);
+    }
 
-    for (const symbol of symbols) {
-      if (!this.monitoredSymbols.has(symbol)) {
-        const callback = (price: Price) => {
-          this.onPriceUpdateForSymbol(symbol, price);
-        };
+    this.logger.info(`[TradingEngine] startMonitoringAll: ${allTrades.length} trades (${symbolsAndMarkets.size} unique symbols)`);
 
-        this.priceCallbacks.set(symbol, callback);
-        this.priceStream.subscribe(symbol, callback);
-        this.monitoredSymbols.add(symbol);
-        this.logger.info(`[TradingEngine] Subscribed to ${symbol}`);
+    for (const [symbol, marketTypes] of symbolsAndMarkets) {
+      for (const marketType of marketTypes) {
+        const subscriptionKey = `${symbol}-${marketType}`;
+        const firstTradeForSymbol = allTrades.find(t => t.symbol.toUpperCase() === symbol && getMarketType(t.side) === marketType);
+        const side = firstTradeForSymbol?.side;
+        if (!this.monitoredSymbols.has(subscriptionKey)) {
+          const callback = (price: Price) => {
+            this.onPriceUpdateForSymbol(subscriptionKey, price, side);
+          };
+
+          this.priceCallbacks.set(subscriptionKey, callback);
+          this.priceStream.subscribe(symbol, callback, marketType);
+          this.monitoredSymbols.add(subscriptionKey);
+          this.logger.info(`[TradingEngine] Subscribed to ${symbol} (${marketType})`);
+        }
       }
     }
   }
@@ -104,8 +129,9 @@ export class TradingEngineService implements OnModuleInit {
    * Stops all monitoring.
    */
   async stopAllMonitoring(): Promise<void> {
-    for (const symbol of this.monitoredSymbols) {
-      const callback = this.priceCallbacks.get(symbol);
+    for (const subscriptionKey of this.monitoredSymbols) {
+      const [symbol] = subscriptionKey.split('-');
+      const callback = this.priceCallbacks.get(subscriptionKey);
       if (callback) {
         this.priceStream.unsubscribe(symbol);
       }
@@ -118,13 +144,18 @@ export class TradingEngineService implements OnModuleInit {
   /**
    * Handles price update for a specific symbol.
    */
-  async onPriceUpdateForSymbol(symbol: string, price: Price): Promise<void> {
-    if (!symbol || !price) {
+  async onPriceUpdateForSymbol(subscriptionKey: string, price: Price, side?: TradeSide): Promise<void> {
+    if (!subscriptionKey || !price) {
       return;
     }
+    const [symbol] = subscriptionKey.split('-');
     const trades = await this.repository.findBySymbol(symbol);
 
-    for (const trade of trades) {
+    const relevantTrades = side
+      ? trades.filter(t => getMarketType(t.side) === getMarketType(side))
+      : trades;
+
+    for (const trade of relevantTrades) {
       if (!MONITORED_STATUSES.includes(trade.status)) continue;
 
       const result = this.triggerDetector.checkAllTriggers(trade, price);
@@ -141,7 +172,7 @@ export class TradingEngineService implements OnModuleInit {
 
         this.logger.info(`[TradingEngine] TRIGGER DETECTED: tradeId=${trade.id}, trigger=${result.trigger}, symbol=${symbol}`);
         await this.eventBus.publish(
-          new TriggerDetectedEvent(trade, result.trigger!, result.price!, result.rr, result.tpIndex)
+          new TriggerDetectedEvent(trade, result.trigger!, result.price!, result.rr, result.tpIndex, result.lastTpIndex)
         );
       }
     }
@@ -158,7 +189,8 @@ export class TradingEngineService implements OnModuleInit {
    * Checks if a symbol is being monitored.
    */
   isMonitoring(symbol: string): boolean {
-    return this.monitoredSymbols.has(symbol.toUpperCase());
+    const upperSymbol = symbol.toUpperCase();
+    return Array.from(this.monitoredSymbols).some(key => key.startsWith(upperSymbol + '-'));
   }
 
   /**
@@ -182,7 +214,8 @@ export class TradingEngineService implements OnModuleInit {
         continue;
       }
 
-      const price = await this.priceStream.getCurrentPrice(trade.symbol);
+      const marketType = getMarketType(trade.side);
+      const price = await this.priceStream.getCurrentPrice(trade.symbol, marketType);
       if (!price) {
         continue;
       }

@@ -18,5 +18,6 @@ export class StateChangedEvent {
     public readonly oldStatus: TradeStatus,
     public readonly newStatus: TradeStatus,
     public readonly reason: string,
+    public readonly rr?: number,
   ) {}
 }

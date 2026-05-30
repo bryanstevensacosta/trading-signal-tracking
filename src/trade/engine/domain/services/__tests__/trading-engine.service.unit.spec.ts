@@ -109,9 +109,10 @@ describe('TradingEngineService', () => {
 
       expect(mockPriceStream.subscribe).toHaveBeenCalledWith(
         'BTCUSDT',
-        expect.any(Function)
+        expect.any(Function),
+        'futures'
       );
-      expect(engine.getMonitoredSymbols()).toContain('BTCUSDT');
+      expect(engine.getMonitoredSymbols()).toContain('BTCUSDT-futures');
     });
 
     it('should not subscribe twice for same symbol', async () => {
@@ -141,7 +142,7 @@ describe('TradingEngineService', () => {
       const trade = createTrade();
       mockRepository.findBySymbol.mockResolvedValue([]);
       const unsubscribe = jest.fn();
-      (engine as any).priceCallbacks.set('BTCUSDT', unsubscribe);
+      (engine as any).priceCallbacks.set('BTCUSDT-futures', unsubscribe);
 
       await engine.stopMonitoring(trade);
 
@@ -247,12 +248,12 @@ describe('TradingEngineService', () => {
       expect(engine.getMonitoredSymbols()).toEqual([]);
     });
 
-    it('should return all monitored symbols', async () => {
+    it('should return all monitored symbols with market type', async () => {
       const trade = createTrade({ symbol: 'BTCUSDT' });
 
       await engine.startMonitoring(trade);
 
-      expect(engine.getMonitoredSymbols()).toEqual(['BTCUSDT']);
+      expect(engine.getMonitoredSymbols()).toEqual(['BTCUSDT-futures']);
     });
   });
 

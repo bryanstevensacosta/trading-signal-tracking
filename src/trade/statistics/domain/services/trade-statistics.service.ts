@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { Trade, TradeStatus } from '../../../shared/types';
-import { TradeStatisticsPort, TradeStatistics, CalculateRROutput } from '../ports/trade-statistics.port';
+import { TradeStatisticsPort, TradeStatistics, CalculateRROutput, TradeSummary } from '../ports/trade-statistics.port';
 import { TradeHistoryService } from '../../../history/domain/services/trade-history.service';
+import { isActiveTrade as checkActive, isClosedTrade as checkClosed, calculateTradeSummary as calcSummary, isWinningTrade as checkWin } from './trade-statistics.helpers';
+
+export { isActiveTrade, isClosedTrade, calculateTradeSummary } from './trade-statistics.helpers';
 
 @Injectable()
 export class TradeStatisticsService implements TradeStatisticsPort {
@@ -13,8 +16,8 @@ export class TradeStatisticsService implements TradeStatisticsPort {
   }
 
   async calculateStatistics(trades: Trade[]): Promise<TradeStatistics> {
-    const closedTrades = trades.filter((t) => this.isClosedTrade(t.status));
-    const winningTrades = closedTrades.filter((t) => this.isWinningTrade(t.status));
+    const closedTrades = trades.filter((t) => checkClosed(t.status));
+    const winningTrades = closedTrades.filter((t) => checkWin(t.status));
 
     const winRate = closedTrades.length > 0 ? winningTrades.length / closedTrades.length : 0;
 
@@ -34,7 +37,7 @@ export class TradeStatisticsService implements TradeStatisticsPort {
     const lossesBySymbol: Record<string, number> = {};
 
     closedTrades.forEach((t) => {
-      const isWin = this.isWinningTrade(t.status);
+      const isWin = checkWin(t.status);
       winsBySymbol[t.symbol] = (winsBySymbol[t.symbol] || 0) + (isWin ? 1 : 0);
       lossesBySymbol[t.symbol] = (lossesBySymbol[t.symbol] || 0) + (isWin ? 0 : 1);
     });
@@ -93,11 +96,15 @@ export class TradeStatisticsService implements TradeStatisticsPort {
     return { rr, pnl };
   }
 
-  private isClosedTrade(status: TradeStatus): boolean {
-    return status.startsWith('closed_') || status === TradeStatus.CANCELLED;
+  isActiveTrade(status: TradeStatus): boolean {
+    return checkActive(status);
   }
 
-  private isWinningTrade(status: TradeStatus): boolean {
-    return status === TradeStatus.CLOSED_WIN || status === TradeStatus.CLOSED_PARTIAL;
+  isClosedTrade(status: TradeStatus): boolean {
+    return checkClosed(status);
+  }
+
+  calculateTradeSummary(trades: Trade[]): TradeSummary {
+    return calcSummary(trades);
   }
 }

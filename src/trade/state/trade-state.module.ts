@@ -3,7 +3,10 @@ import { CqrsModule } from '@nestjs/cqrs';
 import { LoggerModule } from '../../shared/shared.module';
 import { StateMachineService } from './domain/services/state-machine.service';
 import { TransitionStateHandler } from './application/commands/transition-state.handler';
+import { PendingCleanupService } from './domain/services/pending-cleanup.service';
 import { TradeRepositoryModule } from '../repository/trade-repository.module';
+import { TelegramCoreModule } from '@telegram/core/telegram-core.module';
+import { TradeApprovalModule } from '@telegram/notification/trade-approval/trade-approval.module';
 
 export const CommandHandlers = [TransitionStateHandler];
 
@@ -25,6 +28,7 @@ export const CommandHandlers = [TransitionStateHandler];
  * - State transitions (PENDING → ACTIVE, ACTIVE → CLOSED_WIN, etc.)
  * - Validates transitions using VALID_TRANSITIONS map
  * - Emits StateChangedEvent
+ * - Cleanup pending trades (timeout, new messages)
  * 
  * **What trade/state does NOT do:**
  * - Trigger detection (that goes to trade/engine)
@@ -41,11 +45,14 @@ export const CommandHandlers = [TransitionStateHandler];
     CqrsModule,
     LoggerModule,
     forwardRef(() => TradeRepositoryModule),
+    forwardRef(() => TelegramCoreModule),
+    forwardRef(() => TradeApprovalModule),
   ],
   providers: [
     StateMachineService,
+    PendingCleanupService,
     ...CommandHandlers,
   ],
-  exports: [StateMachineService, TransitionStateHandler],
+  exports: [StateMachineService, TransitionStateHandler, PendingCleanupService],
 })
 export class TradeStateModule {}

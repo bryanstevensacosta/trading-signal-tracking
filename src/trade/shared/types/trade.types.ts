@@ -2,6 +2,8 @@ import { TradeStatus } from './trade-status';
 import { TradeSide } from './trigger';
 import { OrderType } from './order-type';
 
+export type CancelledBy = 'user' | 'auto_timeout' | 'auto_message' | 'auto_command';
+
 /**
  * Domain entity representing a trade.
  */
@@ -26,6 +28,8 @@ export interface Trade {
   createdAt: Date;
   updatedAt: Date;
   closedAt: Date | null;
+  cancelledBy?: CancelledBy | null;
+  approvedAt?: Date | null;
 }
 
 /**
@@ -61,4 +65,6 @@ export interface UpdateTradeInput {
   tpsHit?: number[];
   closedAt?: Date;
   notificationMessageId?: number;
+  cancelledBy?: CancelledBy | null;
+  approvedAt?: Date | null;
 }

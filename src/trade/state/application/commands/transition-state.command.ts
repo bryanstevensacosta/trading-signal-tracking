@@ -19,6 +19,7 @@ export class TransitionStateCommand implements ICommand {
     public readonly metadata?: {
       tpsHit?: number[];
       closedAt?: Date;
+      rr?: number;
     },
   ) {}
 }

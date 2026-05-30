@@ -25,7 +25,7 @@ export class OnTriggerDetectedHandler implements IEventHandler<TriggerDetectedEv
   ) {}
 
   async handle(event: TriggerDetectedEvent): Promise<void> {
-    const { trade, trigger, tpIndex } = event;
+    const { trade, trigger, tpIndex, rr } = event;
 
     const currentTrade = await this.repository.findById(trade.id);
     if (!currentTrade) {
@@ -75,11 +75,19 @@ export class OnTriggerDetectedHandler implements IEventHandler<TriggerDetectedEv
         break;
       }
 
-      case 'sl':
-        await this.commandBus.execute(
-          new TransitionStateCommand(trade.id, TradeStatus.CLOSED_LOSS, 'sl_triggered')
-        );
+      case 'sl': {
+        const hasTpsHit = currentTrade.tpsHit && currentTrade.tpsHit.length > 0;
+        if (hasTpsHit) {
+          await this.commandBus.execute(
+            new TransitionStateCommand(trade.id, TradeStatus.CLOSED_LOSS, 'sl_after_tp', { rr })
+          );
+        } else {
+          await this.commandBus.execute(
+            new TransitionStateCommand(trade.id, TradeStatus.CLOSED_LOSS, 'sl_triggered')
+          );
+        }
         break;
+      }
     }
   }
 }

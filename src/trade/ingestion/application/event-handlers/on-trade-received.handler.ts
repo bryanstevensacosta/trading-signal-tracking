@@ -1,11 +1,12 @@
 import { EventsHandler, IEventHandler } from '@nestjs/cqrs';
 import { CommandBus } from '@nestjs/cqrs';
-import { Inject } from '@nestjs/common';
+import { Inject, forwardRef } from '@nestjs/common';
 import { TradeReceivedEvent } from '../../domain/events/trade-received.event';
 import { ParseTradeCommand } from '../../../parsing/application/commands/parse-trade/command';
 import { ParseResult } from '../../../parsing/domain/ports/parser.port';
-import { SendConfirmationCommand } from '@telegram/notification/trade-confirmation/application/commands/send-confirmation/command';
+import { SendConfirmationCommand } from '@telegram/notification/trade-approval/application/commands/send-confirmation/command';
 import { LoggerPort, LOGGER_PORT } from '../../../../shared/domain/ports/logger.port';
+import { PendingCleanupService } from '../../../state/domain/services/pending-cleanup.service';
 
 /**
  * Handler for TradeReceivedEvent.
@@ -17,6 +18,8 @@ export class OnTradeReceivedHandler implements IEventHandler<TradeReceivedEvent>
 
   constructor(
     private readonly commandBus: CommandBus,
+    @Inject(forwardRef(() => PendingCleanupService))
+    private readonly pendingCleanupService: PendingCleanupService,
     @Inject(LOGGER_PORT) logger: LoggerPort,
   ) {
     this.logger = logger;
@@ -24,6 +27,8 @@ export class OnTradeReceivedHandler implements IEventHandler<TradeReceivedEvent>
 
   async handle(event: TradeReceivedEvent): Promise<void> {
     this.logger.info(`Processing trade message from chat ${event.source.chatId}: "${event.text}"`);
+
+    await this.pendingCleanupService.cancelAllPending('New trade message received - previous pending trade cancelled', 'auto_message');
 
     const parseResult = await this.commandBus.execute<ParseTradeCommand, ParseResult>(
       new ParseTradeCommand(event.text),

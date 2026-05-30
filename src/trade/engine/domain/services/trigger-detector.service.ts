@@ -10,6 +10,7 @@ export interface TriggerResult {
   price?: number;
   tpIndex?: number;
   rr?: number;
+  lastTpIndex?: number;
 }
 
 /**
@@ -163,11 +164,16 @@ export class TriggerDetectorService {
         : currentPrice >= trade.sl;
 
     if (isHit) {
+      const lastTpIndex = trade.tpsHit && trade.tpsHit.length > 0
+        ? trade.tpsHit[trade.tpsHit.length - 1]
+        : undefined;
+
       return {
         triggered: true,
         trigger: TriggerType.SL,
         price: trade.sl,
         rr: -1,
+        lastTpIndex,
       };
     }
 

@@ -9,8 +9,10 @@ import { OnTradeSavedHandler } from './application/event-handlers/on-trade-saved
 import { TelegramIngestionAdapter } from './infrastructure/adapters/telegram-ingestion.adapter';
 import { TradeParsingModule } from '../parsing/trade-parsing.module';
 import { TradeRepositoryModule } from '../repository/trade-repository.module';
-import { TelegramNotificationSingleModule } from '../../telegram/notification/single-trade/telegram-notification-single.module';
+import { TradeAlertsModule } from '../../telegram/notification/trade-alerts/telegram-notification-single.module';
 import { TradeEngineModule } from '../engine/trade-engine.module';
+import { TelegramCoreModule } from '../../telegram/core/telegram-core.module';
+import { TradeStateModule } from '../state/trade-state.module';
 
 export const CommandHandlers = [IngestMessageHandler];
 export const EventHandlers = [OnTradeReceivedHandler, OnTradeSavedHandler];
@@ -35,8 +37,10 @@ export const EventHandlers = [OnTradeReceivedHandler, OnTradeSavedHandler];
     LoggerModule,
     forwardRef(() => TradeParsingModule),
     forwardRef(() => TradeRepositoryModule),
-    TelegramNotificationSingleModule,
+    TradeAlertsModule,
     TradeEngineModule,
+    forwardRef(() => TelegramCoreModule),
+    forwardRef(() => TradeStateModule),
   ],
   providers: [
     IngestionService,

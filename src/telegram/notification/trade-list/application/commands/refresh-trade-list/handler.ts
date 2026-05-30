@@ -1,9 +1,9 @@
 import { ICommandHandler, CommandHandler } from '@nestjs/cqrs';
 import { RefreshTradeListCommand } from './command';
 import { TradeRepositoryPort, TRADE_REPOSITORY_PORT } from '@trade/repository/domain/ports/trade-repository.port';
-import { TradeDisplayService } from '../../../domain/services/trade-display.service';
+import { TradeListService } from '../../../domain/services/trade-list.service';
 import { TradeListCacheService } from '../../../domain/services/trade-list-cache.service';
-import { TELEGRAM_PORT, TelegramPort } from '@telegram/notification/single-trade/domain/ports/telegram.port';
+import { TELEGRAM_PORT, TelegramPort } from '@telegram/core';
 import { PRICE_CACHE_PORT, PriceCachePort } from '@price/cache/domain/ports/price-cache.port';
 import { Inject, forwardRef } from '@nestjs/common';
 import { getTelegramConfig } from '@config/telegram.config';
@@ -17,7 +17,7 @@ export class RefreshTradeListHandler
     private readonly repository: TradeRepositoryPort,
     @Inject(forwardRef(() => PRICE_CACHE_PORT))
     private readonly priceCache: PriceCachePort,
-    private readonly displayService: TradeDisplayService,
+    private readonly displayService: TradeListService,
     private readonly cache: TradeListCacheService,
     @Inject(TELEGRAM_PORT) private readonly telegram: TelegramPort,
   ) {}

@@ -4,7 +4,7 @@ import { OnTradeReceivedHandler } from '../on-trade-received.handler';
 import { TradeReceivedEvent } from '../../../domain/events/trade-received.event';
 import { MessageSourceVO } from '../../../domain/value-objects/message-source.vo';
 import { ParseTradeCommand } from '../../../../parsing/application/commands/parse-trade/command';
-import { SendConfirmationCommand } from '@telegram/notification/trade-confirmation/application/commands/send-confirmation/command';
+import { SendConfirmationCommand } from '@telegram/notification/trade-approval/application/commands/send-confirmation/command';
 import { TradeSide } from '@trade/shared';
 import { LoggerPort, LOGGER_PORT } from '@shared/domain/ports/logger.port';
 

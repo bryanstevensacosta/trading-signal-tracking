@@ -1,1 +1,0 @@
-export { TelegramBotAdapter } from './telegram-bot.adapter';

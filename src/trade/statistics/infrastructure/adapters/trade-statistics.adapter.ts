@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { TradeStatisticsPort, TradeStatistics } from '../../domain/ports/trade-statistics.port';
-import { Trade } from '../../../shared/types';
+import { TradeStatisticsPort, TradeStatistics, TradeSummary } from '../../domain/ports/trade-statistics.port';
+import { Trade, TradeStatus } from '../../../shared/types';
 import { TradeHistoryService } from '../../../history/domain/services/trade-history.service';
+import { isActiveTrade, isClosedTrade, calculateTradeSummary } from '../../domain/services/trade-statistics.helpers';
 
 @Injectable()
 export class TradeStatisticsAdapter implements TradeStatisticsPort {
@@ -37,5 +38,17 @@ export class TradeStatisticsAdapter implements TradeStatisticsPort {
 
   calculateRR(_trade: Trade): { rr: number; pnl: number } | null {
     return { rr: 0, pnl: 0 };
+  }
+
+  isActiveTrade(status: TradeStatus): boolean {
+    return isActiveTrade(status);
+  }
+
+  isClosedTrade(status: TradeStatus): boolean {
+    return isClosedTrade(status);
+  }
+
+  calculateTradeSummary(trades: Trade[]): TradeSummary {
+    return calculateTradeSummary(trades);
   }
 }

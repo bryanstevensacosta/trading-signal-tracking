@@ -10,5 +10,6 @@ export class TriggerDetectedEvent {
     public readonly price: number,
     public readonly rr?: number,
     public readonly tpIndex?: number,
+    public readonly lastTpIndex?: number,
   ) {}
 }

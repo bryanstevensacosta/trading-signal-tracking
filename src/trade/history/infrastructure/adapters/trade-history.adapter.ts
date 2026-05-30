@@ -44,7 +44,11 @@ export class TradeHistoryAdapter implements TradeHistoryPort {
 
   async findHistory(filters?: HistoryFilters): Promise<Trade[]> {
     const allTrades = await this.repository.findAll();
-    let historyTrades = allTrades.filter((t) => t.status !== 'pending');
+    let historyTrades = allTrades.filter((t) => {
+      if (t.status === 'pending') return false;
+      if (t.status === 'cancelled' && t.cancelledBy?.startsWith('auto_')) return false;
+      return true;
+    });
 
     if (filters) {
       historyTrades = this.applyFilters(historyTrades, filters);

@@ -3,7 +3,7 @@ import { BinanceSpotPort } from '../../domain/ports/binance-spot.port';
 import { ExchangeConfig } from '../../domain/value-objects/exchange-config.vo';
 import { Price, MarketType } from '@trade/shared';
 import { LoggerPort, LOGGER_PORT } from '@shared';
-import { WebSocket } from 'ws';
+import { WebSocket, MessageEvent } from 'ws';
 import {
   ExchangeConnectionError,
   SymbolNotFoundError,
@@ -11,6 +11,7 @@ import {
 } from '../../domain/errors/exchange-errors';
 
 interface BinanceSpotTickerResponse {
+  [key: string]: unknown;
   symbol: string;
   priceChange: string;
   priceChangePercent: string;
@@ -218,14 +219,15 @@ export class BinanceSpotAdapter implements BinanceSpotPort, OnModuleInit, OnModu
     return { ...this.config };
   }
 
-  private getField(data: any, ...fields: string[]): string | undefined {
+  private getField(data: BinanceSpotTickerResponse, ...fields: string[]): string | undefined {
     for (const f of fields) {
-      if (data[f] !== undefined) return data[f];
+      const value = data[f];
+      if (value !== undefined) return value as string;
     }
     return undefined;
   }
 
-  private normalizeSpotTicker(data: any): Price {
+  private normalizeSpotTicker(data: BinanceSpotTickerResponse): Price {
     const symbol = this.getField(data, 's', 'symbol');
     const bid = this.getField(data, 'b', 'bidPrice');
     const ask = this.getField(data, 'a', 'askPrice');
@@ -257,7 +259,7 @@ export class BinanceSpotAdapter implements BinanceSpotPort, OnModuleInit, OnModu
       this.startPingInterval();
     };
 
-    this.ws.onmessage = (event: any) => {
+    this.ws.onmessage = (event: MessageEvent) => {
       try {
         const data = event.data;
         const message = typeof data === 'string' ? JSON.parse(data) : JSON.parse(data.toString('utf8'));
@@ -280,7 +282,7 @@ export class BinanceSpotAdapter implements BinanceSpotPort, OnModuleInit, OnModu
     };
   }
 
-  private handleMessage(message: { stream?: string; data?: any }): void {
+  private handleMessage(message: { stream?: string; data?: BinanceSpotTickerResponse }): void {
     if (!message.stream || !message.data) {
       return;
     }

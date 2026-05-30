@@ -1,11 +1,11 @@
 import { OrderType, TradeStatus, TradeSide } from '../../src/trade/shared';
-import { NotificationTemplateService } from '../../src/telegram/notification/single-trade/domain/services/notification-template.service';
+import { TradeAlertService } from '../../src/telegram/notification/trade-alerts/domain/services/trade-alert.service';
 
-describe('NotificationTemplateService (unit)', () => {
-  let templateService: NotificationTemplateService;
+describe('TradeAlertService (unit)', () => {
+  let templateService: TradeAlertService;
 
   beforeAll(() => {
-    templateService = new NotificationTemplateService();
+    templateService = new TradeAlertService();
   });
 
   describe('formatEntryTriggered', () => {
@@ -35,7 +35,7 @@ describe('NotificationTemplateService (unit)', () => {
 
       expect(message).toContain('ENTRY HIT');
       expect(message).toContain('BTCUSDT');
-      expect(message).toContain('🟢');
+      expect(message).toContain('FUTURES LONG');
       expect(message).toContain('50000');
     });
 
@@ -65,7 +65,7 @@ describe('NotificationTemplateService (unit)', () => {
 
       expect(message).toContain('ENTRY HIT');
       expect(message).toContain('ETHUSDT');
-      expect(message).toContain('🔴');
+      expect(message).toContain('FUTURES SHORT');
     });
   });
 
@@ -192,7 +192,7 @@ describe('NotificationTemplateService (unit)', () => {
       expect(message).toContain('TRADE CLOSED');
       expect(message).toContain('💰');
       expect(message).toContain('BTCUSDT');
-      expect(message).toContain('closed_win');
+      expect(message).toContain('All TPs Hit');
     });
   });
 });

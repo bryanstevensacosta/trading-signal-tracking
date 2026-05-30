@@ -1,12 +1,12 @@
 import fc from 'fast-check';
-import { TradeListFormatterService } from '../trade-list-formatter.service';
+import { TelegramFormatter } from '@telegram/shared/formatters';
 import { Trade, TradeStatus, TradeSide, OrderType } from '@trade/shared';
 
 describe('TradeListFormatterService (property-based)', () => {
-  let formatter: TradeListFormatterService;
+  let formatter: TelegramFormatter;
 
   beforeEach(() => {
-    formatter = new TradeListFormatterService();
+    formatter = new TelegramFormatter();
   });
 
   const createTradeArb = (): fc.Arbitrary<Trade> =>
@@ -47,7 +47,7 @@ describe('TradeListFormatterService (property-based)', () => {
   it('should always return a string', () => {
     fc.assert(
       fc.property(fc.array(createTradeArb()), (trades) => {
-        const result = formatter.format(trades);
+        const result = formatter.formatTradeList(trades, { html: true });
         return typeof result === 'string' && result.length > 0;
       }),
       { numRuns: 50 }
@@ -57,7 +57,7 @@ describe('TradeListFormatterService (property-based)', () => {
   it('should contain header in every output', () => {
     fc.assert(
       fc.property(fc.array(createTradeArb()), (trades) => {
-        const result = formatter.format(trades);
+        const result = formatter.formatTradeList(trades, { html: true });
         return result.includes('TRADES');
       }),
       { numRuns: 50 }
@@ -65,12 +65,12 @@ describe('TradeListFormatterService (property-based)', () => {
   });
 
   it('should show "No trades yet" only for empty array', () => {
-    const result = formatter.format([]);
+    const result = formatter.formatTradeList([], { html: true });
     expect(result).toContain('No trades yet');
 
     fc.assert(
       fc.property(fc.array(createTradeArb(), { minLength: 1 }), (trades) => {
-        const result = formatter.format(trades);
+        const result = formatter.formatTradeList(trades, { html: true });
         return !result.includes('No trades yet');
       }),
       { numRuns: 50 }
@@ -80,7 +80,7 @@ describe('TradeListFormatterService (property-based)', () => {
   it('should contain Summary section when there are trades', () => {
     fc.assert(
       fc.property(fc.array(createTradeArb(), { minLength: 1 }), (trades) => {
-        const result = formatter.format(trades);
+        const result = formatter.formatTradeList(trades, { html: true });
         return result.includes('Summary:');
       }),
       { numRuns: 50 }
@@ -90,7 +90,7 @@ describe('TradeListFormatterService (property-based)', () => {
   it('should always contain "WR" in summary when there are trades', () => {
     fc.assert(
       fc.property(fc.array(createTradeArb(), { minLength: 1 }), (trades) => {
-        const result = formatter.format(trades);
+        const result = formatter.formatTradeList(trades, { html: true });
         return result.includes('% WR');
       }),
       { numRuns: 50 }

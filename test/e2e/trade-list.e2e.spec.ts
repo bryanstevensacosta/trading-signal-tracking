@@ -2,13 +2,13 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { TradeEntity } from '@trade/repository/infrastructure/persistence/trade.entity';
 import { SqliteTradeAdapter } from '@trade/repository/infrastructure/adapters/sqlite-trade.adapter';
-import { TradeListFormatterService } from '@telegram/notification/trade-list/domain/services/trade-list-formatter.service';
+import { TelegramFormatter } from '@telegram/shared/formatters';
 import { TradeListCacheService } from '@telegram/notification/trade-list/domain/services/trade-list-cache.service';
 import { OrderType, TradeStatus, TradeSide } from '@trade/shared';
 
 describe('Telegram Notification Trade List (e2e)', () => {
   let adapter: SqliteTradeAdapter;
-  let formatter: TradeListFormatterService;
+  let formatter: TelegramFormatter;
   let cache: TradeListCacheService;
 
   beforeAll(async () => {
@@ -24,13 +24,13 @@ describe('Telegram Notification Trade List (e2e)', () => {
       ],
       providers: [
         SqliteTradeAdapter,
-        TradeListFormatterService,
+        TelegramFormatter,
         TradeListCacheService,
       ],
     }).compile();
 
     adapter = module.get<SqliteTradeAdapter>(SqliteTradeAdapter);
-    formatter = module.get<TradeListFormatterService>(TradeListFormatterService);
+    formatter = module.get<TelegramFormatter>(TelegramFormatter);
     cache = module.get<TradeListCacheService>(TradeListCacheService);
   });
 
@@ -73,7 +73,7 @@ describe('Telegram Notification Trade List (e2e)', () => {
     });
 
     it('should format trade list with active trades', () => {
-      const formatted = formatter.format([{
+      const formatted = formatter.formatTradeList([{
         id: '1',
         symbol: 'BTCUSDT',
         side: TradeSide.LONG,
@@ -94,7 +94,7 @@ describe('Telegram Notification Trade List (e2e)', () => {
         createdAt: new Date(),
         updatedAt: new Date(),
         closedAt: null,
-      }]);
+      }], { html: true });
 
       expect(formatted).toContain('TRADES');
       expect(formatted).toContain('BTCUSDT');

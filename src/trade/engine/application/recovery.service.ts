@@ -1,6 +1,6 @@
 import { Injectable, Inject, forwardRef } from '@nestjs/common';
 import { EventBus } from '@nestjs/cqrs';
-import { OrderType } from '@trade/shared';
+import { Trade, OrderType } from '@trade/shared';
 import { TradeRepositoryPort, TRADE_REPOSITORY_PORT } from '../../repository/domain/ports/trade-repository.port';
 import { PriceStreamService } from '@price/stream/domain/services/price-stream.service';
 import { TriggerDetectorService, TriggerResult } from '../domain/services/trigger-detector.service';
@@ -58,7 +58,7 @@ export class RecoveryService {
   /**
    * Checks a single trade for any missed triggers.
    */
-  private async checkTradeForMissedTriggers(trade: any): Promise<TriggerResult> {
+  private async checkTradeForMissedTriggers(trade: Trade): Promise<TriggerResult> {
     if (trade.orderType !== OrderType.LIMIT) {
       return { triggered: false };
     }

@@ -1,1 +1,1 @@
-export * from './telegram-message.adapter';
+export * from './trade-list-notifier.adapter';

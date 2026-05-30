@@ -1,5 +1,5 @@
 import { RefreshTradeListHandler } from '../handler';
-import { TradeDisplayService } from '../../../../domain/services/trade-display.service';
+import { TradeListService } from '../../../../domain/services/trade-list.service';
 import { TradeListCacheService } from '../../../../domain/services/trade-list-cache.service';
 import { RefreshTradeListCommand } from '../command';
 import { Trade, TradeStatus, TradeSide, OrderType, Price } from '@trade/shared';
@@ -58,7 +58,7 @@ describe('RefreshTradeListHandler (unit)', () => {
       getBySymbols: jest.fn().mockReturnValue([]),
     };
 
-    const displayService = new TradeDisplayService();
+    const displayService = new TradeListService();
     cache = new TradeListCacheService();
 
     handler = new RefreshTradeListHandler(

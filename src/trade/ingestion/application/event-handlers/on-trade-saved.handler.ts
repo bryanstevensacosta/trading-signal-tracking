@@ -1,8 +1,8 @@
 import { EventsHandler, IEventHandler } from '@nestjs/cqrs';
 import { Inject } from '@nestjs/common';
 import { TradeSavedEvent } from '../../domain/events/trade-saved.event';
-import { NotificationTemplateService } from '@telegram/notification/single-trade/domain/services/notification-template.service';
-import { TELEGRAM_PORT } from '@telegram/notification/single-trade/domain/ports/telegram.port';
+import { TradeAlertService } from '@telegram/notification/trade-alerts/domain/services/trade-alert.service';
+import { TELEGRAM_PORT, TelegramPort } from '@telegram/core';
 import { TradingEngineService } from '../../../engine/domain/services/trading-engine.service';
 import { getTelegramConfig } from '@config/telegram.config';
 import { LoggerPort, LOGGER_PORT } from '../../../../shared/domain/ports/logger.port';
@@ -15,8 +15,8 @@ export class OnTradeSavedHandler implements IEventHandler<TradeSavedEvent> {
   private readonly logger: LoggerPort;
 
   constructor(
-    private readonly templates: NotificationTemplateService,
-    @Inject(TELEGRAM_PORT) private readonly telegram: any,
+    private readonly templates: TradeAlertService,
+    @Inject(TELEGRAM_PORT) private readonly telegram: TelegramPort,
     private readonly engine: TradingEngineService,
     @Inject(LOGGER_PORT) logger: LoggerPort,
   ) {

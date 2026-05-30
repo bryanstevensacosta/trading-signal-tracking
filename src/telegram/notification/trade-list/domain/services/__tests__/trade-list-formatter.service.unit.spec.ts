@@ -1,11 +1,11 @@
-import { TradeListFormatterService } from '../trade-list-formatter.service';
+import { TelegramFormatter } from '@telegram/shared/formatters';
 import { Trade, TradeStatus, TradeSide, OrderType } from '@trade/shared';
 
 describe('TradeListFormatterService', () => {
-  let formatter: TradeListFormatterService;
+  let formatter: TelegramFormatter;
 
   beforeEach(() => {
-    formatter = new TradeListFormatterService();
+    formatter = new TelegramFormatter();
   });
 
   const createTrade = (overrides: Partial<Trade> = {}): Trade => ({
@@ -32,9 +32,9 @@ describe('TradeListFormatterService', () => {
     ...overrides,
   });
 
-  describe('format', () => {
+  describe('formatTradeList', () => {
     it('should format empty trade list', () => {
-      const result = formatter.format([]);
+      const result = formatter.formatTradeList([], { html: true });
 
       expect(result).toContain('No trades yet');
     });
@@ -45,7 +45,7 @@ describe('TradeListFormatterService', () => {
         createTrade({ symbol: 'ETHUSDT', status: TradeStatus.ACTIVE }),
       ];
 
-      const result = formatter.format(trades);
+      const result = formatter.formatTradeList(trades, { html: true });
 
       expect(result).toContain('Active:');
       expect(result).toContain('BTCUSDT');
@@ -56,8 +56,8 @@ describe('TradeListFormatterService', () => {
       const longTrade = createTrade({ symbol: 'BTCUSDT', side: TradeSide.LONG, status: TradeStatus.PENDING });
       const shortTrade = createTrade({ symbol: 'ETHUSDT', side: TradeSide.SHORT, status: TradeStatus.PENDING });
 
-      const resultLong = formatter.format([longTrade]);
-      const resultShort = formatter.format([shortTrade]);
+      const resultLong = formatter.formatTradeList([longTrade], { html: true });
+      const resultShort = formatter.formatTradeList([shortTrade], { html: true });
 
       expect(resultLong).toContain('🟢');
       expect(resultShort).toContain('🔴');
@@ -67,8 +67,8 @@ describe('TradeListFormatterService', () => {
       const pendingTrade = createTrade({ symbol: 'BTCUSDT', status: TradeStatus.PENDING });
       const activeTrade = createTrade({ symbol: 'ETHUSDT', status: TradeStatus.ACTIVE });
 
-      const resultPending = formatter.format([pendingTrade]);
-      const resultActive = formatter.format([activeTrade]);
+      const resultPending = formatter.formatTradeList([pendingTrade], { html: true });
+      const resultActive = formatter.formatTradeList([activeTrade], { html: true });
 
       expect(resultPending).toContain('⏳');
       expect(resultActive).toContain('✅');
@@ -82,10 +82,10 @@ describe('TradeListFormatterService', () => {
         tps: [52000, 53000],
       });
 
-      const result = formatter.format([trade]);
+      const result = formatter.formatTradeList([trade], { html: true });
 
       expect(result).toContain('SL: 49000');
-      expect(result).toContain('TP: 52000 (+1)');
+      expect(result).toContain('TP: 52000');
     });
 
     it('should show closed trades separately', () => {
@@ -94,7 +94,7 @@ describe('TradeListFormatterService', () => {
         status: TradeStatus.CLOSED_WIN,
       });
 
-      const result = formatter.format([closedTrade]);
+      const result = formatter.formatTradeList([closedTrade], { html: true });
 
       expect(result).toContain('Closed:');
       expect(result).toContain('💰');
@@ -108,7 +108,7 @@ describe('TradeListFormatterService', () => {
         })
       );
 
-      const result = formatter.format(closedTrades);
+      const result = formatter.formatTradeList(closedTrades, { html: true });
 
       expect(result).toContain('... and 2 more');
     });
@@ -119,7 +119,7 @@ describe('TradeListFormatterService', () => {
         createTrade({ symbol: 'ETHUSDT', status: TradeStatus.CLOSED_LOSS }),
       ];
 
-      const result = formatter.format(trades);
+      const result = formatter.formatTradeList(trades, { html: true });
 
       expect(result).toContain('Summary:');
       expect(result).toContain('1W / 1L');
@@ -132,7 +132,7 @@ describe('TradeListFormatterService', () => {
         createTrade({ symbol: 'BNBUSDT', status: TradeStatus.CLOSED_LOSS }),
       ];
 
-      const result = formatter.format(trades);
+      const result = formatter.formatTradeList(trades, { html: true });
 
       expect(result).toContain('67% WR');
     });
@@ -142,7 +142,7 @@ describe('TradeListFormatterService', () => {
         createTrade({ symbol: 'BTCUSDT', status: TradeStatus.PENDING }),
       ];
 
-      const result = formatter.format(trades);
+      const result = formatter.formatTradeList(trades, { html: true });
 
       expect(result).toContain('0% WR');
     });

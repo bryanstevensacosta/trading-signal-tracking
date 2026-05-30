@@ -116,7 +116,8 @@ export class PinoLoggerAdapter implements LoggerPort, LoggerService, OnModuleDes
         closeSync(fd);
       }
     } catch (error) {
-      console.error('Failed to purge old logs:', error);
+      // Use console for critical errors that must be visible even without logger initialization
+      console.error('Failed to purge old logs:', error); // eslint-disable-line no-console
     }
   }
 }
