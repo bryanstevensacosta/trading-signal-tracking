@@ -30,6 +30,7 @@ export interface Trade {
   closedAt: Date | null;
   cancelledBy?: CancelledBy | null;
   approvedAt?: Date | null;
+  lastSeenTimestamp?: Date | null;
 }
 
 /**
@@ -67,4 +68,5 @@ export interface UpdateTradeInput {
   notificationMessageId?: number;
   cancelledBy?: CancelledBy | null;
   approvedAt?: Date | null;
+  lastSeenTimestamp?: Date | null;
 }

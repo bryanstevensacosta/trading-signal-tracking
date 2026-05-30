@@ -99,4 +99,7 @@ export class TradeEntity {
 
   @Column({ type: 'datetime', nullable: true })
   approvedAt: Date | null;
+
+  @Column({ type: 'datetime', nullable: true })
+  lastSeenTimestamp: Date | null;
 }

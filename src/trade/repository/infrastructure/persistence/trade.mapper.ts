@@ -34,6 +34,7 @@ export class TradeMapper {
       closedAt: entity.closedAt,
       cancelledBy: entity.cancelledBy as Trade['cancelledBy'],
       approvedAt: entity.approvedAt || null,
+      lastSeenTimestamp: entity.lastSeenTimestamp || null,
     };
   }
 
@@ -64,6 +65,7 @@ export class TradeMapper {
       closedAt: trade.closedAt,
       cancelledBy: trade.cancelledBy || null,
       approvedAt: trade.approvedAt || null,
+      lastSeenTimestamp: trade.lastSeenTimestamp || null,
     };
   }
 
