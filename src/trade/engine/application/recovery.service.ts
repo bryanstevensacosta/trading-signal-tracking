@@ -69,7 +69,10 @@ export class RecoveryService {
     }
 
     const marketType = trade.side === TradeSide.SPOT ? 'spot' : 'futures';
-    const startTime = trade.createdAt.getTime();
+    // Use lastSeenTimestamp if available, otherwise use createdAt
+    const startTime = trade.lastSeenTimestamp 
+      ? trade.lastSeenTimestamp.getTime() 
+      : trade.createdAt.getTime();
     const now = Date.now();
     const endTime = now;
 

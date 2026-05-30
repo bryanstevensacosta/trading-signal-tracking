@@ -170,6 +170,11 @@ export class TradingEngineService implements OnModuleInit {
         }
         this.recentTriggers.set(triggerKey, now);
 
+        // Update lastSeenTimestamp to track when trade was last processed
+        await this.repository.update(trade.id, {
+          lastSeenTimestamp: new Date(),
+        });
+
         this.logger.info(`[TradingEngine] TRIGGER DETECTED: tradeId=${trade.id}, trigger=${result.trigger}, symbol=${symbol}`);
         await this.eventBus.publish(
           new TriggerDetectedEvent(trade, result.trigger!, result.price!, result.rr, result.tpIndex, result.lastTpIndex)
