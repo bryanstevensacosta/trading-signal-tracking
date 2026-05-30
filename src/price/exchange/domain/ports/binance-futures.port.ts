@@ -70,4 +70,31 @@ export interface BinanceFuturesPort {
    * Checks if a symbol exists in USD-M Futures exchange.
    */
   symbolExists(symbol: string): Promise<boolean>;
+
+  /**
+   * Gets historical klines (candlestick) data for a symbol.
+   * Used for recovery after server restart.
+   * 
+   * @param symbol - Trading symbol (e.g., 'BTCUSDT')
+   * @param interval - Kline interval ('1s', '1m', '5m', etc.)
+   * @param startTime - Start time in milliseconds
+   * @param endTime - End time in milliseconds
+   * @param limit - Max number of klines (default 1440 = 24h)
+   * @returns Array of kline data with open, high, low, close, volume
+   */
+  getKlines(
+    symbol: string,
+    interval?: string,
+    startTime?: number,
+    endTime?: number,
+    limit?: number
+  ): Promise<Array<{
+    openTime: number;
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+    volume: number;
+    closeTime: number;
+  }>>;
 }

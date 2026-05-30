@@ -76,6 +76,26 @@ export class PriceStreamService implements PriceStreamPort {
     }
   }
 
+  async getKlines(
+    symbol: string,
+    marketType: MarketType = 'spot',
+    interval: string = '1m',
+    startTime?: number,
+    endTime?: number,
+    limit: number = 1440
+  ): Promise<Array<{
+    openTime: number;
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+    volume: number;
+    closeTime: number;
+  }>> {
+    const exchange = marketType === 'futures' ? this.futuresExchange : this.spotExchange;
+    return exchange.getKlines(symbol, interval, startTime, endTime, limit);
+  }
+
   private async handlePriceUpdate(price: Price): Promise<void> {
     await this.eventBus.publish(new PriceUpdatedEvent(price));
   }

@@ -16,11 +16,16 @@ export interface TriggerResult {
 /**
  * Domain service for detecting trade triggers.
  * Checks if entry, TP, SL, or breakeven prices are hit.
+ * 
+ * Logic for entry triggers:
+ * - LONG/SPOT: Entry activates when price goes DOWN to entry (currentPrice <= entry)
+ * - SHORT: Entry activates when price goes UP to entry (currentPrice >= entry)
  */
 @Injectable()
 export class TriggerDetectorService {
   /**
    * Checks if entry price is hit for a pending trade.
+   * Uses last price for simplicity.
    * 
    * MARKET order: activates immediately at current price
    * LIMIT order: waits for price to reach entry, fills at entry or better
@@ -30,9 +35,7 @@ export class TriggerDetectorService {
       return { triggered: false };
     }
 
-    // For entry checks, use ask for LONG (buying) and bid for SHORT (selling)
-    const entryPrice = trade.side === TradeSide.LONG ? price.ask : price.bid;
-    const currentPrice = entryPrice;
+    const currentPrice = price.last;
 
     // MARKET order - activates immediately
     if (trade.orderType === OrderType.MARKET) {
@@ -43,17 +46,7 @@ export class TriggerDetectorService {
       };
     }
 
-    // LIMIT order logic
-    const isFilledAtBetterPrice = this.checkLimitFillAtBetterPrice(trade, currentPrice);
-    if (isFilledAtBetterPrice) {
-      return {
-        triggered: true,
-        trigger: TriggerType.ENTRY,
-        price: currentPrice, // Fill at better price (market price)
-      };
-    }
-
-    // Check if price reached entry level
+    // LIMIT order - check if price reached entry level
     const isHit = this.checkPriceReachedEntry(trade, currentPrice);
     if (isHit) {
       return {
@@ -67,37 +60,19 @@ export class TriggerDetectorService {
   }
 
   /**
-   * For LIMIT orders: checks if current price is better than entry.
-   * LONG: if current < entry, fill at current (better price)
-   * SHORT: if current > entry, fill at current (better price)
-   */
-  private checkLimitFillAtBetterPrice(trade: Trade, currentPrice: number): boolean {
-    if (trade.orderType !== OrderType.LIMIT) {
-      return false;
-    }
-
-    const entry = trade.entry;
-
-    if (trade.side === TradeSide.LONG) {
-      return currentPrice < entry;
-    } else if (trade.side === TradeSide.SHORT) {
-      return currentPrice > entry;
-    }
-
-    return false;
-  }
-
-  /**
    * Checks if price has reached the entry level (for LIMIT orders).
+   * 
+   * LONG/SPOT: Activates when price goes DOWN to entry (currentPrice <= entry)
+   * SHORT: Activates when price goes UP to entry (currentPrice >= entry)
    */
   private checkPriceReachedEntry(trade: Trade, currentPrice: number): boolean {
     const entry = trade.entry;
     const entryMax = trade.entryMax || entry;
 
-    if (trade.side === TradeSide.LONG) {
-      return currentPrice >= entry && currentPrice <= entryMax;
-    } else if (trade.side === TradeSide.SHORT) {
+    if (trade.side === TradeSide.LONG || trade.side === TradeSide.SPOT) {
       return currentPrice <= entry && currentPrice >= entryMax;
+    } else if (trade.side === TradeSide.SHORT) {
+      return currentPrice >= entry && currentPrice <= entryMax;
     }
 
     return false;
@@ -115,16 +90,16 @@ export class TriggerDetectorService {
       return { triggered: false };
     }
 
-    const currentPrice = trade.side === TradeSide.LONG ? price.bid : price.ask;
+    const isLongOrSpot = trade.side === TradeSide.LONG || trade.side === TradeSide.SPOT;
+    const currentPrice = isLongOrSpot ? price.bid : price.ask;
 
     for (let i = 0; i < trade.tps.length; i++) {
       const tp = trade.tps[i];
       if (trade.tpsHit?.includes(i)) continue;
 
-      const isHit =
-        trade.side === TradeSide.LONG
-          ? currentPrice >= tp
-          : currentPrice <= tp;
+      const isHit = isLongOrSpot
+        ? currentPrice >= tp
+        : currentPrice <= tp;
 
       if (isHit) {
         const rr = trade.sl
@@ -156,12 +131,12 @@ export class TriggerDetectorService {
       return { triggered: false };
     }
 
-    const currentPrice = trade.side === TradeSide.LONG ? price.bid : price.ask;
+    const isLongOrSpot = trade.side === TradeSide.LONG || trade.side === TradeSide.SPOT;
+    const currentPrice = isLongOrSpot ? price.bid : price.ask;
 
-    const isHit =
-      trade.side === TradeSide.LONG
-        ? currentPrice <= trade.sl
-        : currentPrice >= trade.sl;
+    const isHit = isLongOrSpot
+      ? currentPrice <= trade.sl
+      : currentPrice >= trade.sl;
 
     if (isHit) {
       const lastTpIndex = trade.tpsHit && trade.tpsHit.length > 0

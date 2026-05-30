@@ -371,4 +371,63 @@ export class BinanceSpotAdapter implements BinanceSpotPort, OnModuleInit, OnModu
       this.reconnectTimeout = null;
     }
   }
+
+  async getKlines(
+    symbol: string,
+    interval: string = '1m',
+    startTime?: number,
+    endTime?: number,
+    limit: number = 1440
+  ): Promise<Array<{
+    openTime: number;
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+    volume: number;
+    closeTime: number;
+  }>> {
+    if (!this.connected) {
+      await this.connect();
+    }
+
+    const upperSymbol = symbol.toUpperCase();
+    const params = new URLSearchParams({
+      symbol: upperSymbol,
+      interval,
+      limit: limit.toString(),
+    });
+
+    if (startTime) params.append('startTime', startTime.toString());
+    if (endTime) params.append('endTime', endTime.toString());
+
+    const url = `${this.config.restUrl}/api/v3/klines?${params}`;
+
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000);
+
+      const response = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeout);
+
+      if (!response.ok) {
+        throw new ExchangeConnectionError(this.config.name, `HTTP ${response.status}`);
+      }
+
+      const data = await response.json() as Array<Array<number | string>>;
+
+      return data.map(kline => ({
+        openTime: kline[0] as number,
+        open: parseFloat(kline[1] as string),
+        high: parseFloat(kline[2] as string),
+        low: parseFloat(kline[3] as string),
+        close: parseFloat(kline[4] as string),
+        volume: parseFloat(kline[5] as string),
+        closeTime: kline[6] as number,
+      }));
+    } catch (error) {
+      if (error instanceof ExchangeConnectionError) throw error;
+      throw new ExchangeTimeoutError(this.config.name, 'getKlines', 10000);
+    }
+  }
 }

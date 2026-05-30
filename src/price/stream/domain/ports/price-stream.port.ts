@@ -21,4 +21,20 @@ export interface PriceStreamPort {
   getActiveSubscriptions(): string[];
   isSubscribed(symbol: string): boolean;
   getCurrentPrice(symbol: string, marketType?: MarketType): Promise<Price | null>;
+  getKlines(
+    symbol: string,
+    marketType?: MarketType,
+    interval?: string,
+    startTime?: number,
+    endTime?: number,
+    limit?: number
+  ): Promise<Array<{
+    openTime: number;
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+    volume: number;
+    closeTime: number;
+  }>>;
 }
