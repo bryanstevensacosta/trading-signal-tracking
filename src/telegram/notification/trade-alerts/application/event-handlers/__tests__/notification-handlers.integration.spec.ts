@@ -11,6 +11,7 @@ import { TradeUpdatedEvent } from '@trade/shared/events/trade.events';
 import { Trade, TradeStatus, TradeSide, TriggerType, OrderType } from '@trade/shared/types';
 import { LoggerPort, LOGGER_PORT } from '../../../../../../shared';
 import { TRADE_REPOSITORY_PORT, TradeRepositoryPort } from '@trade/repository/domain/ports/trade-repository.port';
+import { TELEGRAM_NOTIFICATION_LOG_PORT, TelegramNotificationLogPort } from '../../../../shared/domain/ports/telegram-notification-log.port';
 
 const mockLogger: LoggerPort = {
   trace: jest.fn(),
@@ -19,6 +20,13 @@ const mockLogger: LoggerPort = {
   warn: jest.fn(),
   error: jest.fn(),
   fatal: jest.fn(),
+};
+
+const mockNotificationLog: TelegramNotificationLogPort = {
+  logSent: jest.fn(),
+  wasSent: jest.fn().mockResolvedValue(false),
+  getLastSent: jest.fn().mockResolvedValue(null),
+  getForTrade: jest.fn().mockResolvedValue([]),
 };
 
 describe('NotificationEventHandlers', () => {
@@ -55,6 +63,10 @@ describe('NotificationEventHandlers', () => {
         {
           provide: TRADE_REPOSITORY_PORT,
           useValue: mockRepository,
+        },
+        {
+          provide: TELEGRAM_NOTIFICATION_LOG_PORT,
+          useValue: mockNotificationLog,
         },
       ],
     }).compile();
@@ -138,7 +150,7 @@ describe('NotificationEventHandlers', () => {
     let handler: OnTriggerNotificationHandler;
 
     beforeEach(() => {
-      handler = new OnTriggerNotificationHandler(templateService, telegramPort, mockRepository, mockLogger);
+      handler = new OnTriggerNotificationHandler(templateService, telegramPort, mockRepository, mockNotificationLog, mockLogger);
       process.env.TELEGRAM_CHAT_ID = '123456';
     });
 

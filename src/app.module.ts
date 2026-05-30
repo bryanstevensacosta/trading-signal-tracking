@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CqrsModule } from '@nestjs/cqrs';
 import { TradeEntity } from './trade/repository/infrastructure/persistence/trade.entity';
+import { TelegramNotificationLogEntity } from './telegram/notification/shared/domain/entities/telegram-notification-log.entity';
 import { TradeIngestionModule } from './trade/ingestion/trade-ingestion.module';
 import { TradeParsingModule } from './trade/parsing/trade-parsing.module';
 import { TradeRepositoryModule } from './trade/repository/trade-repository.module';
@@ -22,7 +23,7 @@ import { HealthModule } from './health/health.module';
     TypeOrmModule.forRoot({
       type: 'better-sqlite3',
       database: 'crypto-signals.db',
-      entities: [TradeEntity],
+      entities: [TradeEntity, TelegramNotificationLogEntity],
       synchronize: true,
     }),
     CqrsModule.forRoot(),

@@ -7,6 +7,7 @@ import { TradeEngineModule } from '@trade/engine/trade-engine.module';
 import { TradeRepositoryModule } from '@trade/repository/trade-repository.module';
 import { LoggerModule } from '@shared';
 import { TelegramCoreModule } from '@telegram/core/telegram-core.module';
+import { TelegramNotificationSharedModule } from '../shared/telegram-notification-shared.module';
 
 const EventHandlers = [
   OnStateChangedHandler,
@@ -22,6 +23,7 @@ const EventHandlers = [
     TradeRepositoryModule,
     LoggerModule,
     forwardRef(() => TelegramCoreModule),
+    TelegramNotificationSharedModule,
   ],
   providers: [
     TradeAlertService,

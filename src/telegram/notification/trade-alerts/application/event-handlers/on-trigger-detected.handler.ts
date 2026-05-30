@@ -6,6 +6,8 @@ import { TELEGRAM_PORT, TelegramPort } from '@telegram/core/domain/ports/telegra
 import { getTelegramConfig } from '@config/telegram.config';
 import { LOGGER_PORT, LoggerPort } from '../../../../../shared/domain/ports/logger.port';
 import { TradeRepositoryPort, TRADE_REPOSITORY_PORT } from '@trade/repository/domain/ports/trade-repository.port';
+import { TELEGRAM_NOTIFICATION_LOG_PORT, TelegramNotificationLogPort } from '../../../shared/domain/ports/telegram-notification-log.port';
+import { NotificationType, NotificationChannel } from '../../../shared/domain/entities/telegram-notification-log.entity';
 
 @EventsHandler(TriggerDetectedEvent)
 export class OnTriggerNotificationHandler implements IEventHandler<TriggerDetectedEvent> {
@@ -15,6 +17,7 @@ export class OnTriggerNotificationHandler implements IEventHandler<TriggerDetect
     private readonly templates: TradeAlertService,
     @Inject(TELEGRAM_PORT) private readonly telegram: TelegramPort,
     @Inject(TRADE_REPOSITORY_PORT) private readonly repository: TradeRepositoryPort,
+    @Inject(TELEGRAM_NOTIFICATION_LOG_PORT) private readonly notificationLog: TelegramNotificationLogPort,
     @Inject(LOGGER_PORT) logger: LoggerPort,
   ) {
     this.logger = logger;
@@ -24,6 +27,15 @@ export class OnTriggerNotificationHandler implements IEventHandler<TriggerDetect
     const { trade, trigger, rr, tpIndex, price } = event;
 
     this.logger.info(`[OnTriggerNotificationHandler] RECEIVED: tradeId=${trade.id}, trigger=${trigger}, price=${price}, rr=${rr}, tpIndex=${tpIndex}`);
+
+    const notificationType = this.mapTriggerToNotificationType(trigger, tpIndex);
+    const alreadySent = await this.notificationLog.wasSent(trade.id, notificationType, NotificationChannel.ALERTS);
+    
+    if (alreadySent) {
+      this.logger.info(`[OnTriggerNotificationHandler] Notification already sent for trade ${trade.id}, type ${notificationType}, skipping`);
+      return;
+    }
+
     this.logger.info(`[OnTriggerNotificationHandler] Handling: tradeId=${trade.id}, trigger=${trigger}, price=${price}, rr=${rr}, tpIndex=${tpIndex}`);
 
     let message: string;
@@ -57,6 +69,30 @@ default:
 
     if (sentMessageId && sentMessageId > 0) {
       await this.repository.update(trade.id, { notificationMessageId: sentMessageId });
+      
+      await this.notificationLog.logSent({
+        tradeId: trade.id,
+        type: notificationType,
+        channel: NotificationChannel.ALERTS,
+        messageId: sentMessageId,
+        chatId: chatId.toString(),
+      });
+      this.logger.info(`[OnTriggerNotificationHandler] Logged notification for trade ${trade.id}, type ${notificationType}`);
+    }
+  }
+
+  private mapTriggerToNotificationType(trigger: string, tpIndex?: number): NotificationType {
+    switch (trigger) {
+      case 'entry':
+        return NotificationType.ENTRY;
+      case 'tp':
+        return NotificationType.TP;
+      case 'sl':
+        return NotificationType.SL;
+      case 'breakeven':
+        return NotificationType.BREAKEVEN;
+      default:
+        return NotificationType.ENTRY;
     }
   }
 
