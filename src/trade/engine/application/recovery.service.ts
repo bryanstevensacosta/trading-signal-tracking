@@ -50,7 +50,10 @@ export class RecoveryService {
     this.logger.info(`Checking ${pendingTrades.length} pending trades for missed triggers`);
 
     for (const trade of pendingTrades) {
+      this.logger.info(`[Recovery] Checking trade ${trade.id}, status=${trade.status}, lastSeen=${trade.lastSeenTimestamp}, entryExecutedAt=${trade.entryExecutedAt}`);
+      
       const result = await this.checkTradeForMissedTriggers(trade);
+      this.logger.info(`[Recovery] Result for ${trade.id}: triggered=${result.triggered}, trigger=${result.trigger}`);
 
       if (result.triggered && result.trigger && result.price != null) {
         results.set(trade.id, result);
@@ -167,6 +170,7 @@ export class RecoveryService {
       }
 
       this.logger.debug(`[Recovery] Got ${klines.length} klines for ${trade.symbol}`);
+      this.logger.info(`[Recovery] First candle: low=${klines[0]?.low}, high=${klines[0]?.high}, last candle: low=${klines[klines.length-1]?.low}, high=${klines[klines.length-1]?.high}`);
 
       return this.checkKlinesForEntryHit(trade, klines);
     } catch (error) {
