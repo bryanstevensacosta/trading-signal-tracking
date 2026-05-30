@@ -27,6 +27,8 @@ export class OnTriggerDetectedHandler implements IEventHandler<TriggerDetectedEv
   async handle(event: TriggerDetectedEvent): Promise<void> {
     const { trade, trigger, tpIndex, rr } = event;
 
+    this.logger.info(`[OnTriggerDetected] Processing ${trigger} for trade ${trade.id} (current status from event: ${trade.status})`);
+
     const currentTrade = await this.repository.findById(trade.id);
     if (!currentTrade) {
       this.logger.warn(`[OnTriggerDetected] Trade ${trade.id} not found`);

@@ -58,9 +58,12 @@ export class RecoveryService {
           `Trade ${trade.id} (${trade.symbol}): ${result.trigger} trigger detected at ${result.price}`,
         );
 
+        const freshTrade = await this.tradeRepository.findById(trade.id);
+        this.logger.info(`[Recovery] Trade ${trade.id} current status before event: ${freshTrade?.status}`);
+
         await this.eventBus.publish(
           new TriggerDetectedEvent(
-            trade,
+            freshTrade!,
             result.trigger,
             result.price,
             result.rr,
