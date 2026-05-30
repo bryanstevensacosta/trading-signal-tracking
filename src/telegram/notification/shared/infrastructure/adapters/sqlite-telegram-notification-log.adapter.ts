@@ -3,7 +3,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { TelegramNotificationLogEntity, NotificationType, NotificationChannel } from '../../domain/entities/telegram-notification-log.entity';
 import { TelegramNotificationLogPort, TELEGRAM_NOTIFICATION_LOG_PORT } from '../../domain/ports/telegram-notification-log.port';
-import { TelegramNotificationLogMapper } from '../persistence/telegram-notification-log.mapper';
 
 @Injectable()
 export class SqliteTelegramNotificationLogAdapter implements TelegramNotificationLogPort {
@@ -15,6 +14,7 @@ export class SqliteTelegramNotificationLogAdapter implements TelegramNotificatio
   async logSent(params: {
     tradeId?: string;
     type: NotificationType;
+    tpIndex?: number;
     channel: NotificationChannel;
     messageId: number;
     chatId?: string;
@@ -22,6 +22,7 @@ export class SqliteTelegramNotificationLogAdapter implements TelegramNotificatio
     const entity = this.repository.create({
       tradeId: params.tradeId || null,
       type: params.type,
+      tpIndex: params.tpIndex ?? null,
       channel: params.channel,
       messageId: params.messageId,
       chatId: params.chatId || null,
@@ -29,15 +30,23 @@ export class SqliteTelegramNotificationLogAdapter implements TelegramNotificatio
     await this.repository.save(entity);
   }
 
-  async wasSent(tradeId: string, type: NotificationType, channel: NotificationChannel): Promise<boolean> {
+  async wasSent(tradeId: string, type: NotificationType, channel: NotificationChannel, tpIndex?: number): Promise<boolean> {
+    const query: any = { tradeId, type, channel };
+    if (tpIndex !== undefined) {
+      query.tpIndex = tpIndex;
+    } else {
+      query.tpIndex = null;
+    }
+    
     const existing = await this.repository.findOne({
-      where: { tradeId, type, channel },
+      where: query,
     });
     return !!existing;
   }
 
   async getLastSent(tradeId: string, channel: NotificationChannel): Promise<{
     type: NotificationType;
+    tpIndex: number | null;
     messageId: number;
     sentAt: Date;
   } | null> {
@@ -50,6 +59,7 @@ export class SqliteTelegramNotificationLogAdapter implements TelegramNotificatio
     
     return {
       type: last.type as NotificationType,
+      tpIndex: last.tpIndex,
       messageId: last.messageId,
       sentAt: last.sentAt,
     };
@@ -57,6 +67,7 @@ export class SqliteTelegramNotificationLogAdapter implements TelegramNotificatio
 
   async getForTrade(tradeId: string): Promise<Array<{
     type: NotificationType;
+    tpIndex: number | null;
     channel: NotificationChannel;
     messageId: number;
     sentAt: Date;
@@ -68,6 +79,7 @@ export class SqliteTelegramNotificationLogAdapter implements TelegramNotificatio
     
     return logs.map(log => ({
       type: log.type as NotificationType,
+      tpIndex: log.tpIndex,
       channel: log.channel as NotificationChannel,
       messageId: log.messageId,
       sentAt: log.sentAt,

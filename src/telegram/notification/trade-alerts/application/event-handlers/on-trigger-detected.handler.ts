@@ -28,11 +28,11 @@ export class OnTriggerNotificationHandler implements IEventHandler<TriggerDetect
 
     this.logger.info(`[OnTriggerNotificationHandler] RECEIVED: tradeId=${trade.id}, trigger=${trigger}, price=${price}, rr=${rr}, tpIndex=${tpIndex}`);
 
-    const notificationType = this.mapTriggerToNotificationType(trigger, tpIndex);
-    const alreadySent = await this.notificationLog.wasSent(trade.id, notificationType, NotificationChannel.ALERTS);
+    const notificationType = this.mapTriggerToNotificationType(trigger);
+    const alreadySent = await this.notificationLog.wasSent(trade.id, notificationType, NotificationChannel.ALERTS, tpIndex);
     
     if (alreadySent) {
-      this.logger.info(`[OnTriggerNotificationHandler] Notification already sent for trade ${trade.id}, type ${notificationType}, skipping`);
+      this.logger.info(`[OnTriggerNotificationHandler] Notification already sent for trade ${trade.id}, type ${notificationType}, tpIndex ${tpIndex}, skipping`);
       return;
     }
 
@@ -73,15 +73,16 @@ default:
       await this.notificationLog.logSent({
         tradeId: trade.id,
         type: notificationType,
+        tpIndex: tpIndex,
         channel: NotificationChannel.ALERTS,
         messageId: sentMessageId,
         chatId: chatId.toString(),
       });
-      this.logger.info(`[OnTriggerNotificationHandler] Logged notification for trade ${trade.id}, type ${notificationType}`);
+      this.logger.info(`[OnTriggerNotificationHandler] Logged notification for trade ${trade.id}, type ${notificationType}, tpIndex ${tpIndex}`);
     }
   }
 
-  private mapTriggerToNotificationType(trigger: string, tpIndex?: number): NotificationType {
+  private mapTriggerToNotificationType(trigger: string): NotificationType {
     switch (trigger) {
       case 'entry':
         return NotificationType.ENTRY;

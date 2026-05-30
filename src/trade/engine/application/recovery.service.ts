@@ -1,6 +1,6 @@
 import { Injectable, Inject, forwardRef } from '@nestjs/common';
 import { EventBus } from '@nestjs/cqrs';
-import { Trade, OrderType, TradeSide, TriggerType, TradeStatus, Price } from '@trade/shared';
+import { Trade, OrderType, TradeSide, TriggerType, TradeStatus } from '@trade/shared';
 import { TradeRepositoryPort, TRADE_REPOSITORY_PORT } from '../../repository/domain/ports/trade-repository.port';
 import { PriceStreamService, MarketType as StreamMarketType } from '@price/stream/domain/services/price-stream.service';
 import { TriggerDetectorService, TriggerResult } from '../domain/services/trigger-detector.service';
@@ -50,10 +50,7 @@ export class RecoveryService {
     this.logger.info(`Checking ${pendingTrades.length} pending trades for missed triggers`);
 
     for (const trade of pendingTrades) {
-      this.logger.info(`[Recovery] Checking trade ${trade.id}, status=${trade.status}, lastSeen=${trade.lastSeenTimestamp}, entryExecutedAt=${trade.entryExecutedAt}`);
-      
       const result = await this.checkTradeForMissedTriggers(trade);
-      this.logger.info(`[Recovery] Result for ${trade.id}: triggered=${result.triggered}, trigger=${result.trigger}`);
 
       if (result.triggered && result.trigger && result.price != null) {
         results.set(trade.id, result);
@@ -61,29 +58,20 @@ export class RecoveryService {
           `Trade ${trade.id} (${trade.symbol}): ${result.trigger} trigger detected at ${result.price}`,
         );
 
-        // Execute state transition directly via repository
-        if (result.trigger === TriggerType.ENTRY) {
-          await this.processEntryTrigger(trade.id, trade, result.price);
-        } else if (result.trigger === TriggerType.TP) {
-          await this.tradeRepository.update(trade.id, {
-            status: TradeStatus.CLOSED_WIN,
-            tpsHit: [result.tpIndex!],
-            closedAt: new Date(),
-          });
-          this.logger.info(`[Recovery] TP triggered - closed trade ${trade.id} as WIN`);
-          
-          const updatedTrade = await this.tradeRepository.findById(trade.id);
-          await this.eventBus.publish(new TriggerDetectedEvent(updatedTrade!, TriggerType.TP, result.price, result.rr, result.tpIndex));
-        } else if (result.trigger === TriggerType.SL) {
-          await this.tradeRepository.update(trade.id, {
-            status: TradeStatus.CLOSED_LOSS,
-            closedAt: new Date(),
-          });
-          this.logger.info(`[Recovery] SL triggered - closed trade ${trade.id} as LOSS`);
-          
-          const updatedTrade = await this.tradeRepository.findById(trade.id);
-          await this.eventBus.publish(new TriggerDetectedEvent(updatedTrade!, TriggerType.SL, result.price, result.rr));
-        }
+        const freshTrade = await this.tradeRepository.findById(trade.id);
+        this.logger.info(`[Recovery] Trade ${trade.id} current status before event: ${freshTrade?.status}`);
+
+        const event = new TriggerDetectedEvent(
+          freshTrade!,
+          result.trigger,
+          result.price,
+          result.rr,
+          result.tpIndex,
+          result.lastTpIndex,
+        );
+        this.logger.info(`[Recovery] Publishing event for ${event.trigger}, class: ${event.constructor.name}`);
+        await this.eventBus.publish(event);
+        this.logger.info(`[Recovery] Published TriggerDetectedEvent for trade ${trade.id}`);
       }
     }
 
@@ -97,26 +85,37 @@ export class RecoveryService {
           `Trade ${trade.id} (${trade.symbol}): ${result.trigger} trigger detected at ${result.price}`,
         );
 
-        // Update status based on trigger type
-        if (result.trigger === TriggerType.SL) {
-          await this.tradeRepository.update(trade.id, {
-            status: TradeStatus.CLOSED_LOSS,
-            closedAt: new Date(),
-          });
-          this.logger.info(`[Recovery] Closed trade ${trade.id} as LOSS`);
-        } else if (result.trigger === TriggerType.TP) {
-          await this.tradeRepository.update(trade.id, {
-            status: TradeStatus.CLOSED_WIN,
-            tpsHit: [result.tpIndex!],
-            closedAt: new Date(),
-          });
-          this.logger.info(`[Recovery] Closed trade ${trade.id} as WIN`);
-        }
-
-        const updatedTrade = await this.tradeRepository.findById(trade.id);
+        await this.updateTradeStatusOnTrigger(trade.id, result);
+        
         await this.eventBus.publish(
           new TriggerDetectedEvent(
-            updatedTrade!,
+            trade,
+            result.trigger,
+            result.price,
+            result.rr,
+            result.tpIndex,
+            result.lastTpIndex,
+          ),
+        );
+        this.logger.info(`[Recovery] Published TriggerDetectedEvent for trade ${trade.id}`);
+      }
+    }
+
+    const partialTpTrades = await this.tradeRepository.findByStatus('partial_tp');
+    for (const trade of partialTpTrades) {
+      const result = await this.checkActiveTradeForMissedTriggers(trade);
+
+      if (result.triggered && result.trigger && result.price != null) {
+        results.set(trade.id, result);
+        this.logger.info(
+          `Trade ${trade.id} (${trade.symbol}): ${result.trigger} trigger detected at ${result.price}`,
+        );
+
+        await this.updateTradeStatusOnTrigger(trade.id, result);
+        
+        await this.eventBus.publish(
+          new TriggerDetectedEvent(
+            trade,
             result.trigger,
             result.price,
             result.rr,
@@ -136,17 +135,6 @@ export class RecoveryService {
    * Checks a pending trade for entry trigger using klines.
    */
   private async checkTradeForMissedTriggers(trade: Trade): Promise<TriggerResult> {
-    // Check for inconsistent state first - has entryExecutedAt but status is not ACTIVE
-    const statusStr = String(trade.status);
-    if (trade.entryExecutedAt && (statusStr === 'pending' || statusStr === 'cancelled')) {
-      this.logger.info(`[Recovery] Trade ${trade.id} has entryExecutedAt but status is ${statusStr}, fixing...`);
-      return {
-        triggered: true,
-        trigger: TriggerType.ENTRY,
-        price: trade.entryExecutedPrice || trade.entry,
-      };
-    }
-
     if (trade.status !== 'pending') {
       return { triggered: false };
     }
@@ -156,12 +144,7 @@ export class RecoveryService {
     }
 
     if (trade.entryExecutedAt) {
-      this.logger.info(`[Recovery] Trade ${trade.id} has entryExecutedAt but status is PENDING, fixing...`);
-      return {
-        triggered: true,
-        trigger: TriggerType.ENTRY,
-        price: trade.entryExecutedPrice || trade.entry,
-      };
+      return { triggered: false };
     }
 
     const marketType = trade.side === TradeSide.SPOT ? 'spot' : 'futures';
@@ -189,7 +172,6 @@ export class RecoveryService {
       }
 
       this.logger.debug(`[Recovery] Got ${klines.length} klines for ${trade.symbol}`);
-      this.logger.info(`[Recovery] First candle: low=${klines[0]?.low}, high=${klines[0]?.high}, last candle: low=${klines[klines.length-1]?.low}, high=${klines[klines.length-1]?.high}`);
 
       return this.checkKlinesForEntryHit(trade, klines);
     } catch (error) {
@@ -324,80 +306,36 @@ export class RecoveryService {
   }
 
   /**
-   * Processes entry trigger - activates trade and checks for immediate SL/TP hits.
-   * Only notifies the final state (entry + sl/tp closed, or just entry activated).
+   * Updates trade status based on trigger type (for active/partial_tp trades).
    */
-  private async processEntryTrigger(tradeId: string, trade: Trade, price: number): Promise<void> {
-    const existingTrade = await this.tradeRepository.findById(tradeId);
-    const existingEntryExecutedAt = existingTrade?.entryExecutedAt;
-    
-    await this.tradeRepository.update(tradeId, {
-      status: TradeStatus.ACTIVE,
-      entryExecutedPrice: existingTrade?.entryExecutedPrice || price,
-      entryExecutedAt: existingEntryExecutedAt || new Date(),
-    });
-    this.logger.info(`[Recovery] Entry triggered - transitioned trade ${tradeId} to ACTIVE`);
-
-    // After activating, check if SL or TP was already hit
-    const activeTrade = await this.tradeRepository.findById(tradeId);
-    if (!activeTrade) return;
-
-    const marketType = activeTrade.side === TradeSide.SPOT ? 'spot' : 'futures';
-    const currentPrice = await this.priceStream.getCurrentPrice(activeTrade.symbol, marketType);
-    
-    if (!currentPrice) {
-      // No price available - just notify entry
-      await this.eventBus.publish(new TriggerDetectedEvent(activeTrade, TriggerType.ENTRY, price));
-      return;
-    }
-
-    const isLong = activeTrade.side === TradeSide.LONG || activeTrade.side === TradeSide.SPOT;
-
-    // Check SL first
-    if (activeTrade.sl) {
-      const priceForSl = isLong ? currentPrice.bid : currentPrice.ask;
-      const slHit = isLong ? priceForSl <= activeTrade.sl : priceForSl >= activeTrade.sl;
+  private async updateTradeStatusOnTrigger(tradeId: string, result: TriggerResult): Promise<void> {
+    if (result.trigger === TriggerType.SL) {
+      await this.tradeRepository.update(tradeId, {
+        status: TradeStatus.CLOSED_LOSS,
+        closedAt: new Date(),
+      });
+      this.logger.info(`[Recovery] Updated trade ${tradeId} to CLOSED_LOSS`);
+    } else if (result.trigger === TriggerType.TP) {
+      const trade = await this.tradeRepository.findById(tradeId);
+      if (!trade) return;
       
-      if (slHit) {
+      const tpsHit = [...(trade.tpsHit || []), result.tpIndex!];
+      const allTPHit = trade.tps!.length === tpsHit.length;
+      
+      if (allTPHit) {
         await this.tradeRepository.update(tradeId, {
-          status: TradeStatus.CLOSED_LOSS,
+          status: TradeStatus.CLOSED_WIN,
+          tpsHit,
           closedAt: new Date(),
         });
-        this.logger.info(`[Recovery] SL already hit for trade ${tradeId}, closing as LOSS`);
-        
-        const closedTrade = await this.tradeRepository.findById(tradeId);
-        await this.eventBus.publish(new TriggerDetectedEvent(closedTrade!, TriggerType.SL, activeTrade.sl, -1));
-        this.logger.info(`[Recovery] Published SL event for trade ${tradeId} (final state - LOSS)`);
-        return;
+        this.logger.info(`[Recovery] Updated trade ${tradeId} to CLOSED_WIN (all TPs hit)`);
+      } else {
+        await this.tradeRepository.update(tradeId, {
+          status: TradeStatus.PARTIAL_TP,
+          tpsHit,
+        });
+        this.logger.info(`[Recovery] Updated trade ${tradeId} to PARTIAL_TP`);
       }
     }
-
-    // Check TPs (from last to first)
-    if (activeTrade.tps && activeTrade.tps.length > 0) {
-      const priceForTp = isLong ? currentPrice.ask : currentPrice.bid;
-      
-      for (let i = activeTrade.tps.length - 1; i >= 0; i--) {
-        const tp = activeTrade.tps[i];
-        const tpHit = isLong ? priceForTp >= tp : priceForTp <= tp;
-        
-        if (tpHit) {
-          await this.tradeRepository.update(tradeId, {
-            status: TradeStatus.CLOSED_WIN,
-            tpsHit: [i],
-            closedAt: new Date(),
-          });
-          this.logger.info(`[Recovery] TP${i + 1} already hit for trade ${tradeId}, closing as WIN`);
-          
-          const closedTrade = await this.tradeRepository.findById(tradeId);
-          await this.eventBus.publish(new TriggerDetectedEvent(closedTrade!, TriggerType.TP, tp, undefined, i));
-          this.logger.info(`[Recovery] Published TP event for trade ${tradeId} (final state - WIN)`);
-          return;
-        }
-      }
-    }
-
-    // No SL/TP hit - trade remains ACTIVE, notify entry
-    await this.eventBus.publish(new TriggerDetectedEvent(activeTrade, TriggerType.ENTRY, price));
-    this.logger.info(`[Recovery] Published ENTRY event for trade ${tradeId} (trade remains ACTIVE)`);
   }
 }

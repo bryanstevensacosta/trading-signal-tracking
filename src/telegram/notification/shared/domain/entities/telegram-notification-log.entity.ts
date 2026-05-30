@@ -31,7 +31,7 @@ export enum NotificationChannel {
  * Prevents duplicate notifications and enables idempotent processing.
  */
 @Entity('telegram_notification_logs')
-@Index(['tradeId', 'type', 'channel'], { unique: false })
+@Index(['tradeId', 'type', 'tpIndex', 'channel'], { unique: true })
 @Index(['tradeId', 'channel'])
 export class TelegramNotificationLogEntity {
   @PrimaryColumn({ type: 'varchar', length: 16 })
@@ -42,6 +42,9 @@ export class TelegramNotificationLogEntity {
 
   @Column({ type: 'varchar' })
   type: NotificationType;
+
+  @Column({ type: 'integer', nullable: true })
+  tpIndex: number | null;
 
   @Column({ type: 'varchar' })
   channel: NotificationChannel;

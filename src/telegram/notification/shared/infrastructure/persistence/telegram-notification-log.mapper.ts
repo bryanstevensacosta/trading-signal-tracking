@@ -4,6 +4,7 @@ export interface TelegramNotificationLog {
   id: string;
   tradeId: string | null;
   type: NotificationType;
+  tpIndex: number | null;
   channel: NotificationChannel;
   messageId: number;
   chatId: string | null;
@@ -25,6 +26,7 @@ export class TelegramNotificationLogMapper {
       id: entity.id,
       tradeId: entity.tradeId,
       type: entity.type as NotificationType,
+      tpIndex: entity.tpIndex,
       channel: entity.channel as NotificationChannel,
       messageId: entity.messageId,
       chatId: entity.chatId,
@@ -37,6 +39,7 @@ export class TelegramNotificationLogMapper {
       id: log.id || generateId(),
       tradeId: log.tradeId,
       type: log.type,
+      tpIndex: log.tpIndex,
       channel: log.channel,
       messageId: log.messageId,
       chatId: log.chatId,
@@ -49,6 +52,7 @@ export class TelegramNotificationLogMapper {
       id: generateId(),
       tradeId: log.tradeId || null,
       type: log.type!,
+      tpIndex: log.tpIndex ?? null,
       channel: log.channel!,
       messageId: log.messageId!,
       chatId: log.chatId || null,
