@@ -66,10 +66,14 @@ export class RecoveryService {
 
         // Execute state transition directly via repository
         if (result.trigger === TriggerType.ENTRY) {
+          // Check if we already have entryExecutedAt (fixing inconsistent state)
+          const existingTrade = await this.tradeRepository.findById(trade.id);
+          const existingEntryExecutedAt = existingTrade?.entryExecutedAt;
+          
           await this.tradeRepository.update(trade.id, {
             status: TradeStatus.ACTIVE,
-            entryExecutedPrice: result.price,
-            entryExecutedAt: new Date(),
+            entryExecutedPrice: existingTrade?.entryExecutedPrice || result.price,
+            entryExecutedAt: existingEntryExecutedAt || new Date(),
           });
           this.logger.info(`[Recovery] Entry triggered - transitioned trade ${trade.id} to ACTIVE`);
         } else if (result.trigger === TriggerType.TP) {
@@ -133,6 +137,17 @@ export class RecoveryService {
    * Checks a pending trade for entry trigger using klines.
    */
   private async checkTradeForMissedTriggers(trade: Trade): Promise<TriggerResult> {
+    // Check for inconsistent state first - has entryExecutedAt but status is not ACTIVE
+    const statusStr = String(trade.status);
+    if (trade.entryExecutedAt && (statusStr === 'pending' || statusStr === 'cancelled')) {
+      this.logger.info(`[Recovery] Trade ${trade.id} has entryExecutedAt but status is ${statusStr}, fixing...`);
+      return {
+        triggered: true,
+        trigger: TriggerType.ENTRY,
+        price: trade.entryExecutedPrice || trade.entry,
+      };
+    }
+
     if (trade.status !== 'pending') {
       return { triggered: false };
     }
@@ -142,7 +157,12 @@ export class RecoveryService {
     }
 
     if (trade.entryExecutedAt) {
-      return { triggered: false };
+      this.logger.info(`[Recovery] Trade ${trade.id} has entryExecutedAt but status is PENDING, fixing...`);
+      return {
+        triggered: true,
+        trigger: TriggerType.ENTRY,
+        price: trade.entryExecutedPrice || trade.entry,
+      };
     }
 
     const marketType = trade.side === TradeSide.SPOT ? 'spot' : 'futures';
