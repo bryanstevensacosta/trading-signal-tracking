@@ -4,7 +4,6 @@ import { PriceStreamService } from '../../src/price/stream/domain/services/price
 import { BinanceExchangeAdapter } from '../../src/price/exchange/infrastructure/adapters/binance.adapter';
 import { EventBus } from '@nestjs/cqrs';
 
-// eslint-disable-next-line jest/no-disabled-tests
 describe.skip('PriceStreamModule (e2e)', () => {
   let module: TestingModule;
   let service: PriceStreamService;

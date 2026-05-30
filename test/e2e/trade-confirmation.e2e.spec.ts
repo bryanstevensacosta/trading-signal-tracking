@@ -14,7 +14,6 @@ import { CancelTradeConfirmationCommand } from '@telegram/notification/trade-app
 import { EditTradeFieldCommand } from '@telegram/notification/trade-approval/application/commands/edit-trade-field/command';
 import { TradeStatus, TradeSide, OrderType, ParsedTradeData } from '@trade/shared';
 
-// eslint-disable-next-line jest/no-disabled-tests
 describe.skip('Trade Confirmation (e2e)', () => {
   let commandBus: CommandBus;
   let queryBus: QueryBus;

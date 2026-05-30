@@ -12,7 +12,6 @@ import { TradeEntity } from '../../src/trade/repository/infrastructure/persisten
 import { SqliteTradeAdapter } from '../../src/trade/repository/infrastructure/adapters/sqlite-trade.adapter';
 import { TradeStatus, TradeSide } from '../../src/trade/shared';
 
-// eslint-disable-next-line jest/no-disabled-tests
 describe.skip('Trade Ingestion (e2e)', () => {
   let commandBus: CommandBus;
   let eventBus: EventBus;
