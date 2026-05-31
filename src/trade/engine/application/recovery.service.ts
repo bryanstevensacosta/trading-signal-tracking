@@ -6,6 +6,8 @@ import { PriceStreamService, MarketType as StreamMarketType } from '@price/strea
 import { TriggerDetectorService, TriggerResult } from '../domain/services/trigger-detector.service';
 import { TriggerDetectedEvent } from '../domain/events/trigger-detected.event';
 import { LoggerPort, LOGGER_PORT } from '../../../shared/domain/ports/logger.port';
+import { TELEGRAM_NOTIFICATION_LOG_PORT, TelegramNotificationLogPort } from '../../../telegram/notification/shared/domain/ports/telegram-notification-log.port';
+import { NotificationChannel, NotificationType } from '../../../telegram/notification/shared/domain/entities/telegram-notification-log.entity';
 
 interface Kline {
   openTime: number;
@@ -32,6 +34,7 @@ export class RecoveryService {
     private readonly priceStream: PriceStreamService,
     private readonly triggerDetector: TriggerDetectorService,
     private readonly eventBus: EventBus,
+    @Inject(TELEGRAM_NOTIFICATION_LOG_PORT) private readonly notificationLog: TelegramNotificationLogPort,
     @Inject(LOGGER_PORT) logger: LoggerPort,
   ) {
     this.logger = logger;
@@ -54,11 +57,17 @@ export class RecoveryService {
 
       if (result.triggered && result.trigger && result.price != null) {
         results.set(trade.id, result);
-        this.logger.info(
-          `Trade ${trade.id} (${trade.symbol}): ${result.trigger} trigger detected at ${result.price}`,
-        );
+          this.logger.info(
+            `Trade ${trade.id} (${trade.symbol}): ${result.trigger} trigger detected at ${result.price}`,
+          );
 
-        const freshTrade = await this.tradeRepository.findById(trade.id);
+          const alreadyNotified = await this.wasNotificationSent(trade.id, result.trigger, result.tpIndex);
+          if (alreadyNotified) {
+            this.logger.info(`[Recovery] Notification already sent for ${trade.id} ${result.trigger}, skipping event publish`);
+            continue;
+          }
+
+          const freshTrade = await this.tradeRepository.findById(trade.id);
         this.logger.info(`[Recovery] Trade ${trade.id} current status before event: ${freshTrade?.status}`);
 
         const event = new TriggerDetectedEvent(
@@ -85,19 +94,24 @@ export class RecoveryService {
           `Trade ${trade.id} (${trade.symbol}): ${result.trigger} trigger detected at ${result.price}`,
         );
 
-        await this.updateTradeStatusOnTrigger(trade.id, result);
-        
-        await this.eventBus.publish(
-          new TriggerDetectedEvent(
-            trade,
-            result.trigger,
-            result.price,
-            result.rr,
-            result.tpIndex,
-            result.lastTpIndex,
-          ),
-        );
-        this.logger.info(`[Recovery] Published TriggerDetectedEvent for trade ${trade.id}`);
+        const alreadyNotified = await this.wasNotificationSent(trade.id, result.trigger, result.tpIndex);
+        if (alreadyNotified) {
+          this.logger.info(`[Recovery] Notification already sent for ${trade.id} ${result.trigger}, skipping event publish`);
+        } else {
+          await this.updateTradeStatusOnTrigger(trade.id, result);
+          
+          await this.eventBus.publish(
+            new TriggerDetectedEvent(
+              trade,
+              result.trigger,
+              result.price,
+              result.rr,
+              result.tpIndex,
+              result.lastTpIndex,
+            ),
+          );
+          this.logger.info(`[Recovery] Published TriggerDetectedEvent for trade ${trade.id}`);
+        }
       }
     }
 
@@ -111,19 +125,24 @@ export class RecoveryService {
           `Trade ${trade.id} (${trade.symbol}): ${result.trigger} trigger detected at ${result.price}`,
         );
 
-        await this.updateTradeStatusOnTrigger(trade.id, result);
-        
-        await this.eventBus.publish(
-          new TriggerDetectedEvent(
-            trade,
-            result.trigger,
-            result.price,
-            result.rr,
-            result.tpIndex,
-            result.lastTpIndex,
-          ),
-        );
-        this.logger.info(`[Recovery] Published TriggerDetectedEvent for trade ${trade.id}`);
+        const alreadyNotified = await this.wasNotificationSent(trade.id, result.trigger, result.tpIndex);
+        if (alreadyNotified) {
+          this.logger.info(`[Recovery] Notification already sent for ${trade.id} ${result.trigger}, skipping event publish`);
+        } else {
+          await this.updateTradeStatusOnTrigger(trade.id, result);
+          
+          await this.eventBus.publish(
+            new TriggerDetectedEvent(
+              trade,
+              result.trigger,
+              result.price,
+              result.rr,
+              result.tpIndex,
+              result.lastTpIndex,
+            ),
+          );
+          this.logger.info(`[Recovery] Published TriggerDetectedEvent for trade ${trade.id}`);
+        }
       }
     }
 
@@ -336,6 +355,37 @@ export class RecoveryService {
         });
         this.logger.info(`[Recovery] Updated trade ${tradeId} to PARTIAL_TP`);
       }
+    }
+  }
+
+  /**
+   * Checks if notification was already sent for this trigger.
+   */
+  private async wasNotificationSent(tradeId: string, trigger: TriggerType, tpIndex?: number): Promise<boolean> {
+    try {
+      const notificationType = this.mapTriggerToNotificationType(trigger);
+      return await this.notificationLog.wasSent(tradeId, notificationType, NotificationChannel.ALERTS, tpIndex ?? undefined);
+    } catch (error) {
+      this.logger.warn(`[Recovery] Error checking notification log: ${error}`);
+      return false;
+    }
+  }
+
+  /**
+   * Maps trigger type to notification type.
+   */
+  private mapTriggerToNotificationType(trigger: TriggerType): NotificationType {
+    switch (trigger) {
+      case TriggerType.ENTRY:
+        return NotificationType.ENTRY;
+      case TriggerType.TP:
+        return NotificationType.TP;
+      case TriggerType.SL:
+        return NotificationType.SL;
+      case TriggerType.BREAKEVEN:
+        return NotificationType.BREAKEVEN;
+      default:
+        return NotificationType.ENTRY;
     }
   }
 }

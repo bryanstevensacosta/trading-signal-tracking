@@ -12,6 +12,7 @@ import { CheckMissedTriggersHandler } from './application/commands/check-missed-
 import { TradeRepositoryModule } from '../repository/trade-repository.module';
 import { TradeStateModule } from '../state/trade-state.module';
 import { PriceStreamModule } from '@price/stream/price-stream.module';
+import { TelegramNotificationSharedModule } from '../../telegram/notification/shared/telegram-notification-shared.module';
 
 export const CommandHandlers = [
   StartMonitoringHandler,
@@ -51,6 +52,7 @@ const Services = [TradingEngineService, TriggerDetectorService, RecoveryService]
     forwardRef(() => TradeRepositoryModule),
     forwardRef(() => TradeStateModule),
     forwardRef(() => PriceStreamModule),
+    TelegramNotificationSharedModule,
   ],
   providers: [
     ...Services,
