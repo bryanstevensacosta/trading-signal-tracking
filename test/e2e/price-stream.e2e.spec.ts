@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PriceStreamModule } from '../../src/price/stream/price-stream.module';
 import { PriceStreamService } from '../../src/price/stream/domain/services/price-stream.service';
-import { BinanceExchangeAdapter } from '../../src/price/exchange/infrastructure/adapters/binance.adapter';
+import { BinanceSpotAdapter } from '../../src/price/provider/binance/infrastructure/adapters/binance-spot.adapter';
 import { EventBus } from '@nestjs/cqrs';
 
 describe.skip('PriceStreamModule (e2e)', () => {
@@ -15,7 +15,7 @@ describe.skip('PriceStreamModule (e2e)', () => {
     module = await Test.createTestingModule({
       imports: [PriceStreamModule],
     })
-      .overrideProvider(BinanceExchangeAdapter)
+      .overrideProvider(BinanceSpotAdapter)
       .useValue({
         subscribeToTicker: mockSubscribeToTicker,
         connect: jest.fn(),

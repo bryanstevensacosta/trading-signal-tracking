@@ -31,7 +31,7 @@ export class SendConfirmationHandler implements ICommandHandler<SendConfirmation
     const telegramConfig = getTelegramConfig();
 
     this.logger.debug(`Creating pending trade for ${parsedTrade.symbol} in chat ${chatId}`);
-    this.logger.debug(`Config: groupId=${telegramConfig.groupId}, singleTradeThreadId=${telegramConfig.singleTradeThreadId}, tradeListThreadId=${telegramConfig.tradeListThreadId}`);
+    this.logger.debug(`Config: groupId=${telegramConfig.groupId}, tradeAlertsThreadId=${telegramConfig.tradeAlertsThreadId}, tradeListThreadId=${telegramConfig.tradeListThreadId}`);
 
     const input: CreateTradeInput = {
       symbol: parsedTrade.symbol,

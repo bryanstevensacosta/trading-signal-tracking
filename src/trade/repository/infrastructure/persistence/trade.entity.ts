@@ -77,7 +77,7 @@ export class TradeEntity {
   tpsHit: number[];
 
   @Column({ type: 'integer', nullable: true })
-  notificationMessageId: number | null;
+  tradeAlertsMessageId: number | null;
 
   @Column({ type: 'text', nullable: true })
   sourceMessage: string | null;

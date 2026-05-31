@@ -31,12 +31,12 @@ export class SqliteTelegramNotificationLogAdapter implements TelegramNotificatio
   }
 
   async wasSent(tradeId: string, type: NotificationType, channel: NotificationChannel, tpIndex?: number): Promise<boolean> {
-    const query: any = { tradeId, type, channel };
-    if (tpIndex !== undefined) {
-      query.tpIndex = tpIndex;
-    } else {
-      query.tpIndex = null;
-    }
+    const query = {
+      tradeId,
+      type,
+      channel,
+      tpIndex: tpIndex ?? undefined,
+    } as any;
     
     const existing = await this.repository.findOne({
       where: query,

@@ -10,7 +10,7 @@ import { TelegramIngestionAdapter } from './infrastructure/adapters/telegram-ing
 import { TradeParsingModule } from '../parsing/trade-parsing.module';
 import { TradeRepositoryModule } from '../repository/trade-repository.module';
 import { TradeAlertsModule } from '../../telegram/notification/trade-alerts/telegram-notification-single.module';
-import { TradeEngineModule } from '../engine/trade-engine.module';
+import { TriggerModule } from '../trigger/trigger.module';
 import { TelegramCoreModule } from '../../telegram/core/telegram-core.module';
 import { TradeStateModule } from '../state/trade-state.module';
 
@@ -38,7 +38,7 @@ export const EventHandlers = [OnTradeReceivedHandler, OnTradeSavedHandler];
     forwardRef(() => TradeParsingModule),
     forwardRef(() => TradeRepositoryModule),
     TradeAlertsModule,
-    TradeEngineModule,
+    TriggerModule,
     forwardRef(() => TelegramCoreModule),
     forwardRef(() => TradeStateModule),
   ],

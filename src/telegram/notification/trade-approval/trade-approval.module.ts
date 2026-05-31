@@ -14,10 +14,11 @@ import { TradeRepositoryModule } from '@trade/repository/trade-repository.module
 import { TradeAlertsModule } from '@telegram/notification/trade-alerts/telegram-notification-single.module';
 import { TradeListModule } from '@telegram/notification/trade-list/telegram-notification-trade-list.module';
 import { PriceCacheModule } from '@price/cache/price-cache.module';
-import { PriceExchangeModule } from '@price/exchange/price-exchange.module';
+import { BinanceProviderModule } from '@price/provider/binance/binance.module';
 import { LoggerModule } from '@shared';
 import { TelegramCoreModule } from '@telegram/core/telegram-core.module';
 import { TelegramNotificationSharedModule } from '../shared/telegram-notification-shared.module';
+import { TriggerModule } from '@trade/trigger/trigger.module';
 
 export const COMMAND_HANDLERS = [
   SendConfirmationHandler,
@@ -36,9 +37,10 @@ export const COMMAND_HANDLERS = [
     forwardRef(() => TradeAlertsModule),
     forwardRef(() => TradeListModule),
     forwardRef(() => PriceCacheModule),
-    PriceExchangeModule,
+    BinanceProviderModule,
     forwardRef(() => TelegramCoreModule),
     TelegramNotificationSharedModule,
+    forwardRef(() => TriggerModule),
   ],
   providers: [
     BinanceInfoService,

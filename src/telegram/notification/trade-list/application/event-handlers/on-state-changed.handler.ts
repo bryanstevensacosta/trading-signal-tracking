@@ -20,13 +20,12 @@ export class OnTradeListRefreshHandler
 
   async handle(event: StateChangedEvent): Promise<void> {
     const telegramConfig = getTelegramConfig();
-    const telegramChatId = parseInt(process.env.TELEGRAM_CHAT_ID || '0', 10);
-    const chatId = event.trade.sourceChat || telegramChatId || telegramConfig.groupId;
+    const chatId = telegramConfig.groupId;
     if (!chatId) {
-      this.logger.debug(`Trade ${event.trade.id} state changed but no chat ID available, skipping notification`);
+      this.logger.debug(`Trade ${event.trade.id} state changed but no group ID available, skipping notification`);
       return;
     }
-    this.logger.debug(`Trade ${event.trade.id} state changed: ${event.oldStatus} -> ${event.newStatus}, queueing notification`);
-    this.batcher.enqueueNotification(chatId);
+    this.logger.debug(`Trade ${event.trade.id} state changed: ${event.oldStatus} -> ${event.newStatus}, sending to group thread`);
+    this.batcher.enqueueNotificationImmediate(chatId);
   }
 }

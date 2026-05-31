@@ -23,7 +23,7 @@ describe('TradeStatisticsService', () => {
     sourceMessage: 'test',
     sourceChat: 123456,
     tpsHit: [0],
-    notificationMessageId: null,
+    tradeAlertsMessageId: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     closedAt: new Date(),

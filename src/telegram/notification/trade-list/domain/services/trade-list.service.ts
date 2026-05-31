@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { Trade, TradeStatus, Price } from '@trade/shared';
-import { formatSideEmoji, formatStatusEmoji, formatStatusText, formatTps, isActive, isClosed } from '@telegram/shared/helpers';
+import { formatSideEmoji, formatTps } from '@telegram/shared/helpers';
 import { TradeSide } from '@trade/shared';
+import { getTelegramConfig } from '@config/telegram.config';
+
+const ACTIVE_STATUSES = [TradeStatus.PENDING, TradeStatus.ACTIVE, TradeStatus.PARTIAL_TP];
 
 export interface TradeDisplayData {
   trade: Trade;
@@ -24,9 +27,13 @@ export class TradeListService {
     prices: Price[],
     page: number = 1,
     pageSize: number = 10,
-    showId: boolean = false,
+    includeTradeId: boolean = false,
   ): PaginatedTradeList {
-    if (trades.length === 0) {
+    const priceMap = new Map(prices.map(p => [p.symbol, p]));
+
+    const filteredTrades = trades.filter(t => ACTIVE_STATUSES.includes(t.status));
+
+    if (filteredTrades.length === 0) {
       return {
         page,
         pageSize,
@@ -36,109 +43,144 @@ export class TradeListService {
       };
     }
 
-    const priceMap = new Map(prices.map(p => [p.symbol, p]));
-    const activeTrades = trades.filter(t => isActive(t.status));
-    const closedTrades = trades.filter(t => isClosed(t.status));
+    const pendingTrades = filteredTrades.filter(t => t.status === TradeStatus.PENDING);
+    const activeTrades = filteredTrades.filter(t => t.status === TradeStatus.ACTIVE || t.status === TradeStatus.PARTIAL_TP);
 
-    const activeDisplay = activeTrades.map(t => this.formatTradeFull(t, priceMap.get(t.symbol), false, showId));
-    const closedDisplay = closedTrades.map(t => this.formatTradeFull(t, priceMap.get(t.symbol), true, showId));
+    const pendingDisplay = pendingTrades.map(t => this.formatTradeSegment(t, priceMap.get(t.symbol), includeTradeId));
+    const activeDisplay = activeTrades.map(t => this.formatTradeSegment(t, priceMap.get(t.symbol), includeTradeId));
 
-    const allTrades = [...activeDisplay, ...closedDisplay];
-    const total = allTrades.length;
+    const total = filteredTrades.length;
     const totalPages = Math.ceil(total / pageSize);
-    const startIdx = (page - 1) * pageSize;
-    const endIdx = startIdx + pageSize;
-    const pageTrades = allTrades.slice(startIdx, endIdx);
 
-    const header = this.formatHeader(total, page, totalPages);
-    const pagination = totalPages > 1 ? this.formatPagination(page, totalPages) : '';
+    const lines: string[] = [];
+    lines.push(`📊 <b>TRADES</b> (${total})`);
+    lines.push('');
+
+    if (pendingDisplay.length > 0) {
+      lines.push('<b>PENDING</b>');
+      lines.push(...pendingDisplay);
+    } else {
+      lines.push('<b>PENDING</b>');
+      lines.push('N/A');
+    }
+
+    lines.push('');
+    lines.push('---');
+    lines.push('');
+
+    if (activeDisplay.length > 0) {
+      lines.push('<b>ACTIVE</b>');
+      lines.push(...activeDisplay);
+    } else {
+      lines.push('<b>ACTIVE</b>');
+      lines.push('N/A');
+    }
 
     return {
       page,
       pageSize,
       total,
       totalPages,
-      trades: [header, ...pageTrades, pagination].filter(Boolean),
+      trades: lines.filter(Boolean),
     };
   }
 
-  formatTradeFull(
+  formatTradeSegment(
     trade: Trade,
     price: Price | undefined,
-    _compact: boolean = false,
-    showId: boolean = false,
+    includeTradeId: boolean = false,
   ): string {
     const sideEmoji = formatSideEmoji(trade.side);
-    const statusEmoji = formatStatusEmoji(trade.status);
-    const statusText = formatStatusText(trade.status);
+    const tradeAlertsMessageId = trade.tradeAlertsMessageId;
+    const telegramConfig = getTelegramConfig();
+
+    const headerLink = tradeAlertsMessageId && telegramConfig.groupId && telegramConfig.tradeAlertsThreadId
+      ? `<a href="https://t.me/c/${telegramConfig.groupId.toString().replace('-100', '')}/${telegramConfig.tradeAlertsThreadId}/${tradeAlertsMessageId}">${sideEmoji} ${trade.side} ${trade.symbol}</a>`
+      : `${sideEmoji} ${trade.side} ${trade.symbol}`;
+
+    const statusText = this.formatStatusText(trade);
 
     const lines: string[] = [];
+    lines.push(headerLink);
 
-    lines.push(`${sideEmoji} ${trade.side} ${trade.symbol} ${statusEmoji} ${statusText}`);
-    if (showId) {
-      lines.push(`   ID: ${this.formatId(trade.id)}`);
+    if (includeTradeId) {
+      lines.push(`<b>ID:</b> <code>${trade.id}</code>`);
     }
 
-    if (trade.status === 'pending') {
-      lines.push(`   @ <code>${trade.entry}</code>${trade.entryMax ? `-${trade.entryMax}` : ''}`);
-      if (price) lines.push(`   Now: <code>${price.last}</code>`);
-      if (trade.sl) lines.push(`   SL: <code>${trade.sl}</code>`);
-      if (trade.tps) lines.push(`   TP: <code>${formatTps(trade.tps, trade.tpsHit)}</code>`);
-    } else if (trade.status === 'active' || trade.status === 'partial_tp' || trade.status === 'breakeven') {
-      const entryDisplay = trade.entryExecutedPrice
-        ? `<code>${trade.entryExecutedPrice}</code> (exec)`
-        : `<code>${trade.entry}</code>`;
-      lines.push(`   @ ${entryDisplay}`);
-      if (price) lines.push(`   Now: <code>${price.last}</code>`);
-      if (trade.sl) lines.push(`   SL: <code>${trade.sl}</code>`);
-      if (trade.tps) lines.push(`   TP: <code>${formatTps(trade.tps, trade.tpsHit)}</code>`);
-      const pnl = price ? this.calculatePnl(trade, price.last) : null;
-      if (pnl !== null) {
-        const pnlEmoji = pnl >= 0 ? '📈' : '📉';
-        lines.push(`   PnL: ${pnlEmoji} ${pnl > 0 ? '+' : ''}${pnl.toFixed(2)}R`);
-      }
+    lines.push(`<b>STATUS:</b> ${statusText}`);
+
+    const entryValue = trade.entryExecutedPrice || trade.entry;
+    lines.push(`<b>ENTRY:</b> <code>${entryValue}</code>`);
+
+    if (price) {
+      lines.push(`<b>NOW:</b> <code>${price.last}</code>`);
+    }
+
+    if (trade.sl) {
+      lines.push(`<b>SL:</b> <code>${trade.sl}</code>`);
+    }
+
+    if (trade.tps && trade.tps.length > 0) {
+      const tpDisplay = formatTps(trade.tps, trade.tpsHit);
+      lines.push(`<b>TP:</b> <code>${tpDisplay}</code>`);
+    }
+
+    const rr = this.calculateRR(trade);
+    if (rr !== null) {
+      lines.push(`<b>RR:</b> <code>${rr.toFixed(2)}R</code>`);
     } else {
-      lines.push(`   @ <code>${trade.entryExecutedPrice || trade.entry}</code>`);
-      if (trade.sl) lines.push(`   SL: <code>${trade.sl}</code>`);
-      if (trade.tps) lines.push(`   TP: <code>${formatTps(trade.tps, trade.tpsHit)}</code>`);
+      lines.push(`<b>RR:</b> <code>N/A</code>`);
     }
 
     return lines.join('\n');
   }
 
-  private calculatePnl(trade: Trade, currentPrice: number): number | null {
-    if (!trade.entryExecutedPrice) return null;
+  private formatStatusText(trade: Trade): string {
+    if (trade.status === TradeStatus.PENDING) {
+      return 'WAITING FOR ENTRY';
+    }
 
-    const entry = trade.entryExecutedPrice;
-    const riskAmount = entry - (trade.sl || entry);
-    if (riskAmount <= 0) return null;
+    if (trade.status === TradeStatus.PARTIAL_TP && trade.tpsHit) {
+      const lastTpIndex = trade.tpsHit[trade.tpsHit.length - 1];
+      return `HIT TP${lastTpIndex + 2}`;
+    }
 
-    let pnl: number;
-    if (trade.side === TradeSide.LONG) {
-      pnl = (currentPrice - entry) / riskAmount;
+    if (trade.status === TradeStatus.ACTIVE) {
+      return 'WAITING FOR TP/SL';
+    }
+
+    if (trade.status === TradeStatus.BREAKEVEN) {
+      return 'AT BREAKEVEN';
+    }
+
+    return trade.status.toUpperCase();
+  }
+
+  private calculateRR(trade: Trade): number | null {
+    if (!trade.sl || !trade.entryExecutedPrice || !trade.tps?.length) {
+      return null;
+    }
+
+    let tp: number;
+    if (trade.tpsHit && trade.tpsHit.length > 0) {
+      const lastTpIndex = trade.tpsHit[trade.tpsHit.length - 1];
+      tp = trade.tps[lastTpIndex];
+    } else if (trade.status === 'closed_win' || trade.status === 'closed_partial') {
+      tp = trade.tps[trade.tps.length - 1];
     } else {
-      pnl = (entry - currentPrice) / riskAmount;
+      return null;
     }
 
-    return pnl;
-  }
+    if (!tp) return null;
 
-  private formatId(id: string): string {
-    const shortId = id.split('-')[0];
-    return `<code>${shortId}</code>`;
-  }
+    const risk = Math.abs(trade.entryExecutedPrice - trade.sl);
+    if (risk === 0) return null;
 
-  private formatHeader(total: number, page: number, totalPages: number): string {
-    if (totalPages <= 1) {
-      return `📊 <b>TRADES</b> (${total})`;
-    }
-    return `📊 <b>TRADES</b> (${total}) - Page ${page}/${totalPages}`;
-  }
+    const reward = trade.side === TradeSide.LONG
+      ? tp - trade.entryExecutedPrice
+      : trade.entryExecutedPrice - tp;
 
-  private formatPagination(page: number, totalPages: number): string {
-    const prev = page > 1 ? '◀️' : '⬛';
-    const next = page < totalPages ? '▶️' : '⬛';
-    return `\n${prev} Page ${page}/${totalPages} ${next}`;
+    return reward / risk;
   }
 
   private formatEmpty(): string {

@@ -171,7 +171,7 @@ function createTrade(overrides: Partial<Trade> = {}): Trade {
     sourceMessage: 'test message',
     sourceChat: null,
     tpsHit: [],
-    notificationMessageId: null,
+    tradeAlertsMessageId: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     closedAt: null,

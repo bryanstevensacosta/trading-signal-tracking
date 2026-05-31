@@ -1,14 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { EventBus, CommandBus } from '@nestjs/cqrs';
 import { OnStateChangedHandler } from '../on-state-changed.handler';
-import { OnTriggerNotificationHandler } from '../on-trigger-detected.handler';
 import { OnTradeModifiedHandler } from '../on-trade-modified.handler';
 import { TradeAlertService } from '@telegram/notification/trade-alerts/domain/services/trade-alert.service';
 import { TELEGRAM_PORT, TelegramPort } from '@telegram/core/domain/ports/telegram.port';
 import { StateChangedEvent } from '@trade/state/domain/events/state-changed.event';
-import { TriggerDetectedEvent } from '@trade/engine/domain/events/trigger-detected.event';
 import { TradeUpdatedEvent } from '@trade/shared/events/trade.events';
-import { Trade, TradeStatus, TradeSide, TriggerType, OrderType } from '@trade/shared/types';
+import { Trade, TradeStatus, TradeSide, OrderType } from '@trade/shared/types';
 import { LoggerPort, LOGGER_PORT } from '../../../../../../shared';
 import { TRADE_REPOSITORY_PORT, TradeRepositoryPort } from '@trade/repository/domain/ports/trade-repository.port';
 import { TELEGRAM_NOTIFICATION_LOG_PORT, TelegramNotificationLogPort } from '../../../../shared/domain/ports/telegram-notification-log.port';
@@ -86,7 +84,7 @@ describe('NotificationEventHandlers', () => {
         subscribe: jest.fn(),
       } as any;
 
-      handler = new OnStateChangedHandler(templateService, telegramPort, mockRepository, mockCommandBus, mockLogger);
+      handler = new OnStateChangedHandler(templateService, telegramPort, mockRepository, mockCommandBus, mockLogger, mockNotificationLog);
       process.env.TELEGRAM_CHAT_ID = '123456';
     });
 
@@ -94,25 +92,38 @@ describe('NotificationEventHandlers', () => {
       delete process.env.TELEGRAM_CHAT_ID;
     });
 
-    it('should not send notification when status becomes active (handled by OnTriggerNotificationHandler)', async () => {
-      const trade = createTrade({ status: TradeStatus.PENDING });
+    it('should send entry notification when status becomes active with entry_triggered reason', async () => {
+      const trade = createTrade({ status: TradeStatus.PENDING, entry: 50000 });
       const event = new StateChangedEvent(trade, TradeStatus.PENDING, TradeStatus.ACTIVE, 'entry_triggered');
 
       await handler.handle(event);
 
-      expect(mockSendMessage).not.toHaveBeenCalled();
+      expect(mockSendMessage).toHaveBeenCalled();
+      const call = mockSendMessage.mock.calls[0];
+      expect(call[1]).toContain('ENTRY HIT');
     });
 
-    it('should send trade closed notification for closed_win status', async () => {
+it('should send trade closed notification for closed_win status', async () => {
       const trade = createTrade({ status: TradeStatus.CLOSED_WIN });
-      const event = new StateChangedEvent(trade, TradeStatus.ACTIVE, TradeStatus.CLOSED_WIN, 'all_tp_hit');
+      const event = new StateChangedEvent(trade, TradeStatus.ACTIVE, TradeStatus.CLOSED_WIN, 'closed_manual');
 
       await handler.handle(event);
 
-      expect(mockSendMessage).toHaveBeenCalledWith(
-        123456,
-        expect.stringContaining('TRADE CLOSED'),
-      );
+      expect(mockSendMessage).toHaveBeenCalled();
+      const calls = mockSendMessage.mock.calls;
+      const hasTradeClosed = calls.some(call => call[1] && call[1].includes('TRADE CLOSED'));
+      expect(hasTradeClosed).toBe(true);
+    });
+
+    it('should use trade.sourceChat if available for closed status', async () => {
+      const trade = createTrade({ sourceChat: 999999 });
+      const event = new StateChangedEvent(trade, TradeStatus.ACTIVE, TradeStatus.CLOSED_WIN, 'closed_manual');
+
+      await handler.handle(event);
+
+      const calls = mockSendMessage.mock.calls;
+      const sourceChatCall = calls.find(call => call[0] === 999999);
+      expect(sourceChatCall).toBeDefined();
     });
 
     it('should send breakeven notification when status becomes breakeven', async () => {
@@ -127,15 +138,6 @@ describe('NotificationEventHandlers', () => {
       );
     });
 
-    it('should use trade.sourceChat if available for closed status', async () => {
-      const trade = createTrade({ sourceChat: 999999 });
-      const event = new StateChangedEvent(trade, TradeStatus.ACTIVE, TradeStatus.CLOSED_WIN, 'all_tp_hit');
-
-      await handler.handle(event);
-
-      expect(mockSendMessage).toHaveBeenCalledWith(999999, expect.any(String));
-    });
-
     it('should not send notification for partial_tp status', async () => {
       const trade = createTrade({ status: TradeStatus.PARTIAL_TP });
       const event = new StateChangedEvent(trade, TradeStatus.ACTIVE, TradeStatus.PARTIAL_TP, 'partial_tp');
@@ -143,67 +145,6 @@ describe('NotificationEventHandlers', () => {
       await handler.handle(event);
 
       expect(mockSendMessage).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('OnTriggerNotificationHandler', () => {
-    let handler: OnTriggerNotificationHandler;
-
-    beforeEach(() => {
-      handler = new OnTriggerNotificationHandler(templateService, telegramPort, mockRepository, mockNotificationLog, mockLogger);
-      process.env.TELEGRAM_CHAT_ID = '123456';
-    });
-
-    afterEach(() => {
-      delete process.env.TELEGRAM_CHAT_ID;
-    });
-
-    it('should format and send entry trigger notification', async () => {
-      const trade = createTrade({ entry: 50000, sl: 49000, tps: [52000] });
-      const event = new TriggerDetectedEvent(trade, TriggerType.ENTRY, 50000);
-
-      await handler.handle(event);
-
-      expect(mockSendMessage).toHaveBeenCalled();
-      const call = mockSendMessage.mock.calls[0];
-      expect(call[0]).toBe(123456);
-      expect(call[1]).toContain('ENTRY HIT');
-    });
-
-    it('should format and send TP trigger notification with tpIndex and rr', async () => {
-      const trade = createTrade({ tps: [52000, 53000] });
-      const event = new TriggerDetectedEvent(trade, TriggerType.TP, 52000, 2.0, 0);
-
-      await handler.handle(event);
-
-      expect(mockSendMessage).toHaveBeenCalled();
-      const call = mockSendMessage.mock.calls[0];
-      expect(call[0]).toBe(123456);
-      expect(call[1]).toContain('TP1 HIT');
-    });
-
-    it('should format and send SL trigger notification', async () => {
-      const trade = createTrade({ sl: 49000 });
-      const event = new TriggerDetectedEvent(trade, TriggerType.SL, 49000, -1.0);
-
-      await handler.handle(event);
-
-      expect(mockSendMessage).toHaveBeenCalled();
-      const call = mockSendMessage.mock.calls[0];
-      expect(call[0]).toBe(123456);
-      expect(call[1]).toContain('SL HIT');
-    });
-
-    it('should format and send breakeven trigger notification', async () => {
-      const trade = createTrade({ entry: 50000 });
-      const event = new TriggerDetectedEvent(trade, TriggerType.BREAKEVEN, 50000);
-
-      await handler.handle(event);
-
-      expect(mockSendMessage).toHaveBeenCalled();
-      const call = mockSendMessage.mock.calls[0];
-      expect(call[0]).toBe(123456);
-      expect(call[1]).toContain('BREAKEVEN');
     });
   });
 
@@ -264,7 +205,7 @@ function createTrade(overrides: Partial<Trade> = {}): Trade {
     sourceMessage: 'test message',
     sourceChat: null,
     tpsHit: [],
-    notificationMessageId: null,
+    tradeAlertsMessageId: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     closedAt: null,

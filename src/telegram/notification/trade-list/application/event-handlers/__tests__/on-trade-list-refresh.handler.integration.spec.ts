@@ -3,6 +3,11 @@ import { NotificationBatcherService } from '../../../domain/services/notificatio
 import { StateChangedEvent } from '@trade/state/domain/events';
 import { Trade, TradeStatus, TradeSide, OrderType } from '@trade/shared';
 import { LoggerPort } from '../../../../../../shared';
+import { getTelegramConfig } from '@config/telegram.config';
+
+jest.mock('@config/telegram.config', () => ({
+  getTelegramConfig: jest.fn(),
+}));
 
 const mockLogger: LoggerPort = {
   trace: jest.fn(),
@@ -15,7 +20,7 @@ const mockLogger: LoggerPort = {
 
 describe('OnTradeListRefreshHandler', () => {
   let handler: OnTradeListRefreshHandler;
-  let mockBatcher: { enqueueNotification: jest.Mock };
+  let mockBatcher: { enqueueNotificationImmediate: jest.Mock };
 
   const createTrade = (sourceChat: number | null): Trade => ({
     id: '1',
@@ -34,7 +39,7 @@ describe('OnTradeListRefreshHandler', () => {
     sourceMessage: '',
     sourceChat,
     tpsHit: [],
-    notificationMessageId: null,
+    tradeAlertsMessageId: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     closedAt: null,
@@ -42,7 +47,7 @@ describe('OnTradeListRefreshHandler', () => {
 
   beforeEach(() => {
     mockBatcher = {
-      enqueueNotification: jest.fn(),
+      enqueueNotificationImmediate: jest.fn(),
     };
     handler = new OnTradeListRefreshHandler(mockBatcher as any, mockLogger);
   });
@@ -52,7 +57,9 @@ describe('OnTradeListRefreshHandler', () => {
   });
 
   describe('handle', () => {
-    it('should enqueue notification with trade sourceChat', async () => {
+    it('should enqueue notification to groupId', async () => {
+      (getTelegramConfig as jest.Mock).mockReturnValue({ groupId: 22222 });
+
       const trade = createTrade(67890);
       const event = new StateChangedEvent(
         trade,
@@ -63,10 +70,12 @@ describe('OnTradeListRefreshHandler', () => {
 
       await handler.handle(event);
 
-      expect(mockBatcher.enqueueNotification).toHaveBeenCalledWith(67890);
+      expect(mockBatcher.enqueueNotificationImmediate).toHaveBeenCalledWith(22222);
     });
 
-    it('should use TELEGRAM_CHAT_ID env when trade has no sourceChat', async () => {
+    it('should use TELEGRAM_GROUP_ID from config', async () => {
+      (getTelegramConfig as jest.Mock).mockReturnValue({ groupId: 33333 });
+
       const trade = createTrade(null);
       const event = new StateChangedEvent(
         trade,
@@ -75,18 +84,14 @@ describe('OnTradeListRefreshHandler', () => {
         'entry_triggered'
       );
 
-      const originalEnv = process.env.TELEGRAM_CHAT_ID;
-      process.env.TELEGRAM_CHAT_ID = '11111';
-
       await handler.handle(event);
 
-      expect(mockBatcher.enqueueNotification).toHaveBeenCalledWith(11111);
-
-      if (originalEnv) process.env.TELEGRAM_CHAT_ID = originalEnv;
-      else delete process.env.TELEGRAM_CHAT_ID;
+      expect(mockBatcher.enqueueNotificationImmediate).toHaveBeenCalledWith(33333);
     });
 
-    it('should not enqueue when both sourceChat and TELEGRAM_CHAT_ID are missing', async () => {
+    it('should not enqueue when groupId is missing', async () => {
+      (getTelegramConfig as jest.Mock).mockReturnValue({ groupId: 0 });
+
       const trade = createTrade(null);
       const event = new StateChangedEvent(
         trade,
@@ -95,14 +100,9 @@ describe('OnTradeListRefreshHandler', () => {
         'entry_triggered'
       );
 
-      const originalEnv = process.env.TELEGRAM_CHAT_ID;
-      delete process.env.TELEGRAM_CHAT_ID;
-
       await handler.handle(event);
 
-      expect(mockBatcher.enqueueNotification).not.toHaveBeenCalled();
-
-      if (originalEnv) process.env.TELEGRAM_CHAT_ID = originalEnv;
+      expect(mockBatcher.enqueueNotificationImmediate).not.toHaveBeenCalled();
     });
   });
 });

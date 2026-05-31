@@ -19,7 +19,7 @@ describe('trade.events', () => {
     sourceMessage: 'test',
     sourceChat: 123456,
     tpsHit: [],
-    notificationMessageId: null,
+    tradeAlertsMessageId: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     closedAt: null,

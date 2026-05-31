@@ -25,7 +25,7 @@ describe('Trade State (e2e)', () => {
     sourceMessage: 'test',
     sourceChat: null,
     tpsHit: [],
-    notificationMessageId: null,
+    tradeAlertsMessageId: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     closedAt: null,

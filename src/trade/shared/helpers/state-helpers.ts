@@ -17,10 +17,10 @@ export function isActiveTrade(status: TradeStatus): boolean {
 /**
  * Checks if trade status is closed (terminal).
  * @param status - Trade status to check
- * @returns True if status starts with 'closed_'
+ * @returns True if status starts with 'closed_' or is CANCELLED
  */
 export function isClosedTrade(status: TradeStatus): boolean {
-  return status.startsWith('closed_');
+  return status.startsWith('closed_') || status === TradeStatus.CANCELLED;
 }
 
 /**
@@ -89,3 +89,32 @@ export function canCancel(status: TradeStatus): boolean {
 export function canMoveToBreakeven(status: TradeStatus): boolean {
   return status === TradeStatus.ACTIVE || status === TradeStatus.PARTIAL_TP;
 }
+
+/**
+ * Checks if trade status is winning (closed with profit).
+ * @param status - Trade status to check
+ * @returns True if status is CLOSED_WIN or CLOSED_PARTIAL
+ */
+export function isWinningTrade(status: TradeStatus): boolean {
+  return status === TradeStatus.CLOSED_WIN || status === TradeStatus.CLOSED_PARTIAL;
+}
+
+/**
+ * Checks if trade status is losing (closed with loss).
+ * @param status - Trade status to check
+ * @returns True if status is CLOSED_LOSS
+ */
+export function isLosingTrade(status: TradeStatus): boolean {
+  return status === TradeStatus.CLOSED_LOSS;
+}
+
+/**
+ * All closed trade statuses.
+ */
+export const CLOSED_STATUSES: TradeStatus[] = [
+  TradeStatus.CLOSED_WIN,
+  TradeStatus.CLOSED_PARTIAL,
+  TradeStatus.CLOSED_LOSS,
+  TradeStatus.CLOSED_BREAKEVEN,
+  TradeStatus.CLOSED_MANUAL,
+];

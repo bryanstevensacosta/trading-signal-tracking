@@ -52,12 +52,15 @@ export class TransitionStateHandler
    * @throws InvalidTransitionError if transition is invalid
    */
   async execute(command: TransitionStateCommand): Promise<Trade> {
-    this.logger.info(`[TransitionStateHandler] Executing command for trade: ${command.tradeId} -> ${command.targetStatus}`);
+    this.logger.info(`[TransitionStateHandler] Executing command for trade: ${command.tradeId} -> ${command.targetStatus}, reason: ${command.reason}`);
     const trade = await this.repository.findById(command.tradeId);
     
     if (!trade) {
+      this.logger.error(`[TransitionStateHandler] Trade ${command.tradeId} NOT FOUND`);
       throw new TradeNotFoundError(command.tradeId);
     }
+
+    this.logger.debug(`[TransitionStateHandler] ${command.tradeId}: Current status: ${trade.status}`);
 
     const result = this.stateMachine.transition(
       trade,
@@ -66,8 +69,11 @@ export class TransitionStateHandler
     );
 
     if (!result.success) {
+      this.logger.error(`[TransitionStateHandler] ${command.tradeId}: Transition FAILED from ${trade.status} to ${command.targetStatus}, error: ${result.error}`);
       throw new InvalidTransitionError(trade.status, command.targetStatus);
     }
+    
+    this.logger.info(`[TransitionStateHandler] ${command.tradeId}: Transition VALIDATED ${trade.status} -> ${command.targetStatus}`);
 
     const isClosed = command.targetStatus.startsWith('closed_') || command.targetStatus === TradeStatus.CANCELLED;
     

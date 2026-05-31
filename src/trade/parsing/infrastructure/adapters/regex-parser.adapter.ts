@@ -36,6 +36,7 @@ export class RegexParserAdapter implements ParserPort {
       sl = compactParse.sl;
       tps = compactParse.tps;
       chartUrl = compactParse.chartUrl;
+      orderType = compactParse.orderType;
       side = this.inferSide(entry, sl);
     } else {
       orderType = this.extractOrderType(message, rawValues);
@@ -87,7 +88,7 @@ export class RegexParserAdapter implements ParserPort {
   private tryParseCompactFormat(
     text: string,
     raw: Record<string, string>
-  ): { symbol: string; entry: number; sl: number; tps: number[]; chartUrl: string | null } | null {
+  ): { symbol: string; entry: number; sl: number; tps: number[]; chartUrl: string | null; orderType: OrderType } | null {
     let cleanText = text.replace(/\n/g, ' ').trim();
 
     if (/entry[:\s]|sl[:\s]|tp\d*[:\s]|take\s*profit/i.test(cleanText)) {
@@ -137,7 +138,7 @@ export class RegexParserAdapter implements ParserPort {
     if (tps.length > 0) raw['tp'] = tps.join(', ');
     if (chartUrl) raw['chart'] = chartUrl;
 
-    return { symbol, entry, sl, tps, chartUrl };
+    return { symbol, entry, sl, tps, chartUrl, orderType: OrderType.LIMIT };
   }
 
   private inferSide(entry: number | null, sl: number | null): TradeSide | null {

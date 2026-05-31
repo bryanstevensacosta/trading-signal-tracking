@@ -22,6 +22,13 @@ export class NotificationBatcherService {
     this.logger = logger;
   }
 
+  enqueueNotificationImmediate(chatId: number): void {
+    this.logger.debug(`Sending immediate notification for chat ${chatId} (state change)`);
+    this.notifier.notify(chatId).catch(error => {
+      this.logger.error(`Failed to send immediate notification to chat ${chatId}:`, error);
+    });
+  }
+
   enqueueNotification(chatId: number): void {
     const existing = this.pendingNotifications.get(chatId);
 

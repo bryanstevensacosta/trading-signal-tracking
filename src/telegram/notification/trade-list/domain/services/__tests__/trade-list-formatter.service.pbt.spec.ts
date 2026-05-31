@@ -38,7 +38,7 @@ describe('TradeListFormatterService (property-based)', () => {
       sourceMessage: fc.string(),
       sourceChat: fc.oneof(fc.constant(null), fc.integer()),
       tpsHit: fc.array(fc.integer({ min: 0 })),
-      notificationMessageId: fc.oneof(fc.constant(null), fc.integer()),
+      tradeAlertsMessageId: fc.oneof(fc.constant(null), fc.integer()),
       createdAt: fc.date(),
       updatedAt: fc.date(),
       closedAt: fc.oneof(fc.constant(null), fc.date()),

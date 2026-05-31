@@ -1,10 +1,10 @@
-import { TriggerDetectorService, TriggerResult } from '../../src/trade/engine/domain/services/trigger-detector.service';
-import { TradingEngineService } from '../../src/trade/engine/domain/services/trading-engine.service';
+import { TriggerDetectorService, TriggerResult } from '../../src/trade/trigger/domain/services/trigger-detector.service';
+import { TriggerOrchestratorService } from '../../src/trade/trigger/domain/services/trigger-orchestrator.service';
 import { Trade, TradeStatus, TradeSide, Price, OrderType } from '../../src/trade/shared';
 
 describe('Trade Engine (e2e)', () => {
   let triggerDetector: TriggerDetectorService;
-  let tradingEngine: TradingEngineService;
+  let tradingEngine: TriggerOrchestratorService;
 
   const createTrade = (overrides: Partial<Trade> = {}): Trade => ({
     id: 'test-id',
@@ -23,7 +23,7 @@ describe('Trade Engine (e2e)', () => {
     sourceMessage: 'test',
     sourceChat: null,
     tpsHit: [],
-    notificationMessageId: null,
+    tradeAlertsMessageId: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     closedAt: null,
@@ -40,8 +40,15 @@ describe('Trade Engine (e2e)', () => {
     ...overrides,
   });
 
+  const mockLogger = {
+    debug: jest.fn(),
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+  };
+
   beforeAll(() => {
-    triggerDetector = new TriggerDetectorService();
+    triggerDetector = new TriggerDetectorService(mockLogger as any);
   });
 
   describe('Trigger Detection', () => {

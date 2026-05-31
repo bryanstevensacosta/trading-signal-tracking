@@ -23,7 +23,7 @@ describe('SaveTradeHandler', () => {
     sourceMessage: 'LONG BTCUSDT Entry: 50000 SL: 49000 TP: 52000',
     sourceChat: 123456,
     tpsHit: [],
-    notificationMessageId: null,
+    tradeAlertsMessageId: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     closedAt: null,

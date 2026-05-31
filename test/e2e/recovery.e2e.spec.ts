@@ -1,4 +1,4 @@
-import { TriggerDetectorService, TriggerResult } from '../../src/trade/engine/domain/services/trigger-detector.service';
+import { TriggerDetectorService, TriggerResult } from '../../src/trade/trigger/domain/services/trigger-detector.service';
 import { StateMachineService } from '../../src/trade/state/domain/services/state-machine.service';
 import { Trade, TradeStatus, TradeSide, Price, OrderType } from '../../src/trade/shared';
 
@@ -23,7 +23,7 @@ describe('Trade Recovery & Order Types (e2e)', () => {
     sourceMessage: 'test',
     sourceChat: null,
     tpsHit: [],
-    notificationMessageId: null,
+    tradeAlertsMessageId: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     closedAt: null,
@@ -40,8 +40,15 @@ describe('Trade Recovery & Order Types (e2e)', () => {
     ...overrides,
   });
 
+  const mockLogger = {
+    debug: jest.fn(),
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+  };
+
   beforeAll(() => {
-    triggerDetector = new TriggerDetectorService();
+    triggerDetector = new TriggerDetectorService(mockLogger as any);
     stateMachine = new StateMachineService();
   });
 

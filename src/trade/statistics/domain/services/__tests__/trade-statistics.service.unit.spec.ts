@@ -23,7 +23,7 @@ describe('TradeStatisticsService', () => {
     sourceMessage: 'test',
     sourceChat: 123456,
     tpsHit: [0],
-    notificationMessageId: null,
+    tradeAlertsMessageId: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     closedAt: new Date(),
@@ -133,7 +133,9 @@ describe('TradeStatisticsService', () => {
         side: TradeSide.SHORT,
         entry: 50000,
         sl: 51000,
-        entryExecutedPrice: 49000,
+        entryExecutedPrice: 50000,
+        tps: [49000, 48000],
+        tpsHit: [0],
       });
 
       const result = service.calculateRR(trade);

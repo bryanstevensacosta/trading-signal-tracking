@@ -21,7 +21,7 @@ describe('TradeListCacheService', () => {
     sourceMessage: '',
     sourceChat: null,
     tpsHit: [],
-    notificationMessageId: null,
+    tradeAlertsMessageId: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     closedAt: null,

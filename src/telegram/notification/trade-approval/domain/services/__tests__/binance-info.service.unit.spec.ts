@@ -1,5 +1,5 @@
 import { BinanceInfoService, BinanceInfoData } from '../binance-info.service';
-import { BinanceInfo } from '@price/exchange/domain/ports/binance-info.port';
+import { BinanceInfo } from '@price/provider/binance/domain/ports/binance-info.port';
 import { TradeSide } from '@trade/shared';
 
 describe('BinanceInfoService', () => {

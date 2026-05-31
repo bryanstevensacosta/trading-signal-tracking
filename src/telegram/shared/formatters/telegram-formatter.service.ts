@@ -49,8 +49,11 @@ const MESSAGE_TEMPLATES = {
     totalTrades: number;
     winRate: number;
     averageRR: number;
-    bestTrade: number;
-    worstTrade: number;
+    totalRR: number;
+    breakEvenRate: number;
+    profitability: string;
+    bestTrade: { rr: number } | null;
+    worstTrade: { rr: number } | null;
     tradesThisWeek: number;
     tradesThisMonth: number;
   }) => `
@@ -58,10 +61,12 @@ const MESSAGE_TEMPLATES = {
 
   Total: ${stats.totalTrades} trades
   Win Rate: ${(stats.winRate * 100).toFixed(1)}%
+  Total R/R: ${stats.totalRR.toFixed(2)}R
   Avg R/R: ${stats.averageRR.toFixed(2)}R
+  BreakEven: ${(stats.breakEvenRate * 100).toFixed(1)}%
+  Status: ${stats.profitability}
 
-  Best: +${stats.bestTrade.toFixed(2)}R
-  Worst: ${stats.worstTrade.toFixed(2)}R
+  Best: ${stats.bestTrade && stats.bestTrade.rr > 0 ? `+${stats.bestTrade.rr.toFixed(2)}R` : '-'}
 
   This Week: ${stats.tradesThisWeek} trades
   This Month: ${stats.tradesThisMonth} trades
@@ -191,8 +196,11 @@ export class TelegramFormatter {
     totalTrades: number;
     winRate: number;
     averageRR: number;
-    bestTrade: number;
-    worstTrade: number;
+    totalRR: number;
+    breakEvenRate: number;
+    profitability: string;
+    bestTrade: { rr: number } | null;
+    worstTrade: { rr: number } | null;
     tradesThisWeek: number;
     tradesThisMonth: number;
   }): string {

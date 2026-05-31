@@ -1,8 +1,8 @@
 import { Injectable, Inject, forwardRef } from '@nestjs/common';
-import { Context } from 'telegraf';
+import { Context, Input } from 'telegraf';
 import { CommandBus } from '@nestjs/cqrs';
 import { LOGGER_PORT, LoggerPort } from '@shared/domain/ports/logger.port';
-import { CommandResponse } from '../../../command/application/command-response';
+import { CommandResponse } from '../../../cmd/application/command-response';
 import {
   StartCommand,
   HelpCommand,
@@ -10,7 +10,9 @@ import {
   GetActiveTradesCommand,
   GetTradeByIdCommand,
   GetStatsCommand,
-} from '../../../command/query/application/commands';
+  GetShareCardPositionPnlCommand,
+  GetShareCardAccountPnlCommand,
+} from '../../../cmd/query/application/commands';
 import {
   CancelTradeCommand,
   DeleteTradeCommand,
@@ -20,7 +22,7 @@ import {
   CloseTradeCommand,
   MoveToBreakevenCommand,
   ForceOpenCommand,
-} from '../../../command/mutation/application/commands';
+} from '../../../cmd/mutation/application/commands';
 import { PendingCleanupService } from '@trade/state/domain/services/pending-cleanup.service';
 
 @Injectable()
@@ -69,10 +71,15 @@ export class CommandHandlerService {
   }
 
   //5: /history - Historial de trades
-  async handleHistory(ctx: Context): Promise<void> {
+  async handleHistory(ctx: Context, args?: string): Promise<void> {
     await this.cancelPendingBeforeCommand(ctx);
-    const result = await this.commandBus.execute(new GetTradesCommand('history')) as CommandResponse;
-    await this.reply(ctx, result.message);
+    const exportCsv = args?.trim().toLowerCase() === 'csv';
+    const result = await this.commandBus.execute(new GetTradesCommand('history', 1, exportCsv)) as CommandResponse;
+    if (result.file) {
+      await ctx.replyWithDocument(Input.fromBuffer(result.file.buffer, result.file.filename), { caption: result.message });
+    } else {
+      await this.reply(ctx, result.message);
+    }
   }
 
   //6: /stats - Estadísticas
@@ -86,7 +93,7 @@ export class CommandHandlerService {
   async handleTrade(ctx: Context, tradeId: string): Promise<void> {
     await this.cancelPendingBeforeCommand(ctx);
     if (!tradeId) {
-      await this.reply(ctx, 'Usage: /trade <trade_id>');
+      await this.reply(ctx, 'Usage: /trade trade_id');
       return;
     }
     const result = await this.commandBus.execute(new GetTradeByIdCommand(tradeId)) as CommandResponse;
@@ -97,7 +104,7 @@ export class CommandHandlerService {
   async handleCancel(ctx: Context, tradeId: string, chatId: number): Promise<void> {
     await this.cancelPendingBeforeCommand(ctx);
     if (!tradeId) {
-      await this.reply(ctx, 'Usage: /cancel <trade_id>');
+      await this.reply(ctx, 'Usage: /cancel trade_id');
       return;
     }
     const result = await this.commandBus.execute(new CancelTradeCommand(tradeId, chatId)) as CommandResponse;
@@ -108,7 +115,7 @@ export class CommandHandlerService {
   async handleDelete(ctx: Context, tradeId: string, chatId: number): Promise<void> {
     await this.cancelPendingBeforeCommand(ctx);
     if (!tradeId) {
-      await this.reply(ctx, 'Usage: /delete <trade_id>');
+      await this.reply(ctx, 'Usage: /delete trade_id');
       return;
     }
     const result = await this.commandBus.execute(new DeleteTradeCommand(tradeId, chatId)) as CommandResponse;
@@ -119,7 +126,7 @@ export class CommandHandlerService {
   async handleEntry(ctx: Context, tradeId: string, newEntry: number, chatId: number): Promise<void> {
     await this.cancelPendingBeforeCommand(ctx);
     if (!tradeId || !newEntry || isNaN(newEntry)) {
-      await this.reply(ctx, 'Usage: /entry <trade_id> <price>');
+      await this.reply(ctx, 'Usage: /entry trade_id price');
       return;
     }
     const result = await this.commandBus.execute(new ModifyEntryCommand(tradeId, newEntry, chatId)) as CommandResponse;
@@ -130,7 +137,7 @@ export class CommandHandlerService {
   async handleSL(ctx: Context, tradeId: string, newSL: number, chatId: number): Promise<void> {
     await this.cancelPendingBeforeCommand(ctx);
     if (!tradeId || !newSL || isNaN(newSL)) {
-      await this.reply(ctx, 'Usage: /sl <trade_id> <price>');
+      await this.reply(ctx, 'Usage: /sl trade_id price');
       return;
     }
     const result = await this.commandBus.execute(new ModifySLCommand(tradeId, newSL, chatId)) as CommandResponse;
@@ -141,7 +148,7 @@ export class CommandHandlerService {
   async handleTP(ctx: Context, tradeId: string, tpNum: number, newTP: number, chatId: number): Promise<void> {
     await this.cancelPendingBeforeCommand(ctx);
     if (!tradeId || !tpNum || isNaN(newTP)) {
-      await this.reply(ctx, 'Usage: /tp <trade_id> <tp_num> <price>');
+      await this.reply(ctx, 'Usage: /tp trade_id tp_num price');
       return;
     }
     const result = await this.commandBus.execute(new ModifyTPCommand(tradeId, tpNum, newTP, chatId)) as CommandResponse;
@@ -152,7 +159,7 @@ export class CommandHandlerService {
   async handleClose(ctx: Context, tradeId: string, chatId: number): Promise<void> {
     await this.cancelPendingBeforeCommand(ctx);
     if (!tradeId) {
-      await this.reply(ctx, 'Usage: /close <trade_id>');
+      await this.reply(ctx, 'Usage: /close trade_id');
       return;
     }
     const result = await this.commandBus.execute(new CloseTradeCommand(tradeId, chatId)) as CommandResponse;
@@ -163,7 +170,7 @@ export class CommandHandlerService {
   async handleBE(ctx: Context, tradeId: string, chatId: number): Promise<void> {
     await this.cancelPendingBeforeCommand(ctx);
     if (!tradeId) {
-      await this.reply(ctx, 'Usage: /be <trade_id>');
+      await this.reply(ctx, 'Usage: /be trade_id');
       return;
     }
     const result = await this.commandBus.execute(new MoveToBreakevenCommand(tradeId, chatId)) as CommandResponse;
@@ -174,7 +181,7 @@ export class CommandHandlerService {
   async handleOpen(ctx: Context, tradeId: string, chatId: number): Promise<void> {
     await this.cancelPendingBeforeCommand(ctx);
     if (!tradeId) {
-      await this.reply(ctx, 'Usage: /open <trade_id>');
+      await this.reply(ctx, 'Usage: /open trade_id');
       return;
     }
     const result = await this.commandBus.execute(new ForceOpenCommand(tradeId, chatId)) as CommandResponse;
@@ -196,7 +203,35 @@ export class CommandHandlerService {
     });
   }
 
-  //17: Utility para responder
+  //17: /share_card_position [id] - Generar card PNL de posición
+  async handleShareCardPosition(ctx: Context, tradeId: string): Promise<void> {
+    await this.cancelPendingBeforeCommand(ctx);
+    if (!tradeId) {
+      await this.reply(ctx, 'Usage: /share_card_position trade_id');
+      return;
+    }
+    const result = await this.commandBus.execute(new GetShareCardPositionPnlCommand(tradeId)) as CommandResponse;
+    if (result.photo) {
+      await ctx.replyWithPhoto({ source: result.photo }, { caption: result.message });
+    } else {
+      await this.reply(ctx, result.message);
+    }
+  }
+
+  //18: /share_card_account [24h|7d|30d|all] - Generar card PNL de cuenta
+  async handleShareCardAccount(ctx: Context, period: string): Promise<void> {
+    await this.cancelPendingBeforeCommand(ctx);
+    const validPeriods = ['24h', '7d', '30d', 'all'];
+    const parsedPeriod = validPeriods.includes(period) ? period as '24h' | '7d' | '30d' | 'all' : '24h';
+    const result = await this.commandBus.execute(new GetShareCardAccountPnlCommand(parsedPeriod)) as CommandResponse;
+    if (result.photo) {
+      await ctx.replyWithPhoto({ source: result.photo }, { caption: result.message });
+    } else {
+      await this.reply(ctx, result.message);
+    }
+  }
+
+  //19: Utility para responder
   private async reply(ctx: Context, text: string): Promise<void> {
     await ctx.reply(text, { parse_mode: 'HTML' });
   }

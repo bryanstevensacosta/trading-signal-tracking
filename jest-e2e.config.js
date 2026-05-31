@@ -27,7 +27,7 @@ module.exports = {
     '^@price/stream(|/.*)$': '<rootDir>/../src/price/stream/$1',
     '^@price/exchange(|/.*)$': '<rootDir>/../src/price/exchange/$1',
     '^@price/cache(|/.*)$': '<rootDir>/../src/price/cache/$1',
-    '^@telegram/command(|/.*)$': '<rootDir>/../src/telegram/command/$1',
+    '^@telegram/cmd(|/.*)$': '<rootDir>/../src/telegram/cmd/$1',
     '^@config(|/.*)$': '<rootDir>/../src/config/$1',
     '^@trade/statistics(|/.*)$': '<rootDir>/../src/trade/statistics/$1',
     '^@price/exchange/domain(|/.*)$': '<rootDir>/../src/price/exchange/domain/$1',

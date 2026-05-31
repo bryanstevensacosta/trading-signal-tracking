@@ -24,7 +24,7 @@ export interface Trade {
   sourceMessage: string;
   sourceChat: number | null;
   tpsHit: number[];
-  notificationMessageId: number | null;
+  tradeAlertsMessageId: number | null;
   createdAt: Date;
   updatedAt: Date;
   closedAt: Date | null;
@@ -65,7 +65,7 @@ export interface UpdateTradeInput {
   status?: TradeStatus;
   tpsHit?: number[];
   closedAt?: Date;
-  notificationMessageId?: number;
+  tradeAlertsMessageId?: number;
   cancelledBy?: CancelledBy | null;
   approvedAt?: Date | null;
   lastSeenTimestamp?: Date | null;

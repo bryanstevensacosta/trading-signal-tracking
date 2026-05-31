@@ -4,7 +4,8 @@ import { PriceStreamService } from './domain/services/price-stream.service';
 import { SubscribeSymbolsHandler } from './application/commands/subscribe-symbols/handler';
 import { UnsubscribeSymbolsHandler } from './application/commands/unsubscribe-symbols/handler';
 import { GetSubscribedSymbolsHandler } from './application/queries/get-subscribed-symbols/query';
-import { PriceExchangeModule } from '@price/exchange/price-exchange.module';
+import { BinanceProviderModule } from '@price/provider/binance/binance.module';
+import { LoggerModule } from '../../shared/shared.module';
 
 const CommandHandlers = [SubscribeSymbolsHandler, UnsubscribeSymbolsHandler];
 const QueryHandlers = [GetSubscribedSymbolsHandler];
@@ -23,7 +24,8 @@ const QueryHandlers = [GetSubscribedSymbolsHandler];
 @Module({
   imports: [
     CqrsModule,
-    forwardRef(() => PriceExchangeModule),
+    forwardRef(() => BinanceProviderModule),
+    LoggerModule,
   ],
   providers: [
     PriceStreamService,
