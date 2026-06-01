@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { CanvasRenderingContext2D } from '@napi-rs/canvas';
 import { CardConfig, CardTheme } from '@trade/share-card/common/types';
 import {
   CARD_PADDING,
@@ -14,7 +15,7 @@ import {
 @Injectable()
 export class CardRendererService {
   protected config: CardConfig;
-  protected ctx: any;
+  protected ctx: CanvasRenderingContext2D;
 
   /**
    * Sets up the canvas context for rendering.

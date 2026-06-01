@@ -10,6 +10,7 @@ import { TradeStateModule } from './trade/state/trade-state.module';
 import { BinanceProviderModule } from '@price/provider/binance/binance.module';
 import { PriceStreamModule } from '@price/stream/price-stream.module';
 import { TriggerModule } from './trade/trigger/trigger.module';
+import { RecoveryModule } from './recovery/recovery.module';
 import { TelegramCommandModule } from '@telegram/cmd/telegram-command.module';
 import { LoggerModule } from './shared/shared.module';
 import { HealthModule } from './health/health.module';
@@ -34,6 +35,7 @@ import { HealthModule } from './health/health.module';
     BinanceProviderModule,
     PriceStreamModule,
     TriggerModule,
+    RecoveryModule,
     TelegramCommandModule,
     HealthModule,
     LoggerModule,

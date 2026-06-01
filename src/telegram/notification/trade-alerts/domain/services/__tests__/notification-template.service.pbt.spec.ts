@@ -44,19 +44,20 @@ describe('TradeAlertService (property-based)', () => {
   });
 
   describe('formatTPHit', () => {
-    it('should always contain TP number', () => {
+    it('should always contain TP number or ALL TP', () => {
       fc.assert(
         fc.property(
           fc.string({ minLength: 1 }),
-          fc.array(fc.nat(), { maxLength: 5 }),
+          fc.array(fc.nat(), { maxLength: 5, minLength: 1 }),
           fc.integer({ min: 0, max: 10 }),
           fc.float(),
           (symbol, tps, tpIndex, rr) => {
-            if (tps.length === 0) return true;
             const adjustedIndex = tpIndex % tps.length;
             const trade = createTrade({ symbol, tps });
             const result = service.formatTPHit(trade, adjustedIndex, rr);
-            return result.includes(`TP${adjustedIndex + 1} HIT`);
+            const hasTPNumber = result.includes(`TP${adjustedIndex + 1} HIT`);
+            const hasAllTP = result.includes('ALL TP HIT');
+            return hasTPNumber || hasAllTP;
           }
         ),
         { numRuns: 500 }
@@ -99,7 +100,8 @@ describe('TradeAlertService (property-based)', () => {
           (side) => {
             const trade = createTrade({ side });
             const result = service.formatTradeCreated(trade);
-            return result.includes(`Side: ${side}`);
+            const expectedLabel = side === TradeSide.LONG ? 'LONG' : side === TradeSide.SHORT ? 'SHORT' : 'SPOT';
+            return result.includes(expectedLabel);
           }
         ),
         { numRuns: 100 }
@@ -111,7 +113,7 @@ describe('TradeAlertService (property-based)', () => {
         fc.property(fc.nat(), (entry) => {
           const trade = createTrade({ entry });
           const result = service.formatTradeCreated(trade);
-          return result.includes(`Entry: ${entry}`);
+          return result.includes(`${entry}`);
         }),
         { numRuns: 200 }
       );

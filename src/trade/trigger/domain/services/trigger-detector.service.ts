@@ -81,20 +81,22 @@ export class TriggerDetectorService {
    * Checks if price has reached the entry level (for LIMIT orders).
    * 
    * LONG/SPOT: Activates when price goes DOWN to entry (currentPrice <= entry)
-   * SHORT: Activates when price goes UP to entry (currentPrice >= entry)
+   * SHORT: Entry activates when price goes UP to entry (currentPrice >= entry)
    */
   private checkPriceReachedEntry(trade: Trade, currentPrice: number): boolean {
     const entry = trade.entry;
     const entryMax = trade.entryMax;
 
     if (trade.side === TradeSide.LONG || trade.side === TradeSide.SPOT) {
-      const belowEntry = currentPrice <= entry;
-      const withinMax = entryMax === null || entryMax === undefined ? true : currentPrice >= entryMax;
-      return belowEntry && withinMax;
+      if (entryMax === null || entryMax === undefined) {
+        return currentPrice <= entry;
+      }
+      return currentPrice >= entry && currentPrice <= entryMax;
     } else if (trade.side === TradeSide.SHORT) {
-      const aboveEntry = currentPrice >= entry;
-      const withinMax = entryMax === null || entryMax === undefined ? true : currentPrice <= entryMax;
-      return aboveEntry && withinMax;
+      if (entryMax === null || entryMax === undefined) {
+        return currentPrice >= entry;
+      }
+      return currentPrice <= entry && currentPrice >= entryMax;
     }
 
     return false;
@@ -104,7 +106,7 @@ export class TriggerDetectorService {
    * Checks if any TP is hit.
    */
   checkTPHit(trade: Trade, price: Price): TriggerResult {
-    if (trade.status !== 'active') {
+    if (trade.status !== 'active' && trade.status !== 'partial_tp') {
       this.logger.debug(`[TriggerDetector] ${trade.symbol}: Skipping TP check, status is ${trade.status}`);
       return { triggered: false };
     }
@@ -291,6 +293,9 @@ export class TriggerDetectorService {
   /**
    * Gets the executed entry price if entry is hit at current price.
    * Returns null if entry is not yet hit.
+   * 
+   * For MARKET orders: returns currentPrice (execution at market)
+   * For LIMIT orders: returns trade.entry (execution at limit price)
    */
   getExecutedEntryPrice(trade: Trade, currentPrice: number): number | null {
     if (!this.isEntryAlreadyHit(trade, currentPrice)) {
@@ -301,6 +306,6 @@ export class TriggerDetectorService {
       return currentPrice;
     }
 
-    return currentPrice;
+    return trade.entry;
   }
 }

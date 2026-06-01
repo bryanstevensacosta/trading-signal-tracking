@@ -50,9 +50,9 @@ describe('TriggerDetectorService', () => {
   });
 
   describe('checkEntryHit', () => {
-    it('should detect entry hit for LONG trade when ask is within entry range', () => {
+    it('should detect entry hit for LONG trade when last is within entry range', () => {
       const trade = createTrade({ status: TradeStatus.PENDING, entry: 50000, entryMax: 50100 });
-      const price = createPrice({ ask: 50050 });
+      const price = createPrice({ last: 50050 });
 
       const result = service.checkEntryHit(trade, price);
 
@@ -63,16 +63,16 @@ describe('TriggerDetectorService', () => {
 
     it('should not detect entry hit for LONG when price above entryMax', () => {
       const trade = createTrade({ status: TradeStatus.PENDING, entry: 50000, entryMax: 50100 });
-      const price = createPrice({ ask: 50200 });
+      const price = createPrice({ last: 50200 });
 
       const result = service.checkEntryHit(trade, price);
 
       expect(result.triggered).toBe(false);
     });
 
-    it('should detect entry hit for SHORT trade when bid is within entry range', () => {
+    it('should detect entry hit for SHORT trade when last is within entry range', () => {
       const trade = createTrade({ status: TradeStatus.PENDING, side: TradeSide.SHORT, entry: 50000, entryMax: 49900 });
-      const price = createPrice({ bid: 49950 });
+      const price = createPrice({ last: 49950 });
 
       const result = service.checkEntryHit(trade, price);
 
@@ -91,7 +91,7 @@ describe('TriggerDetectorService', () => {
 
     it('should use entry when entryMax is null', () => {
       const trade = createTrade({ status: TradeStatus.PENDING, entry: 50000, entryMax: null });
-      const price = createPrice({ ask: 50000 });
+      const price = createPrice({ last: 50000 });
 
       const result = service.checkEntryHit(trade, price);
 
@@ -215,7 +215,7 @@ describe('TriggerDetectorService', () => {
   describe('checkAllTriggers', () => {
     it('should check entry first', () => {
       const trade = createTrade({ status: TradeStatus.PENDING, entry: 50000 });
-      const price = createPrice({ ask: 50000 });
+      const price = createPrice({ last: 50000 });
 
       const result = service.checkAllTriggers(trade, price);
 

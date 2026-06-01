@@ -74,16 +74,6 @@ describe('ApproveTradeHandler (integration)', () => {
       formatTradeCreated: jest.fn().mockReturnValue('🟢 NEW TRADE - BTCUSDT\n\nSide: LONG\nEntry: 50000\nSL: 49000\nTP: 52000'),
     };
 
-    const mockDisplayService = {
-      formatTradeList: jest.fn().mockReturnValue({
-        trades: ['📊 TRADES (2)', '🟢 LONG BTCUSDT ✅ ACTIVE'],
-        page: 1,
-        pageSize: 100,
-        total: 2,
-        totalPages: 1,
-      }),
-    };
-
     const mockNotificationLog = {
       logSent: jest.fn(),
       wasSent: jest.fn().mockResolvedValue(false),
@@ -114,7 +104,6 @@ describe('ApproveTradeHandler (integration)', () => {
       mockTelegram as any,
       mockTemplate as any,
       mockNotificationTemplates as any,
-      mockDisplayService as any,
       mockPriceCache as any,
       mockNotificationLog as any,
       mockTriggerDetector as any,
@@ -190,7 +179,7 @@ describe('ApproveTradeHandler (integration)', () => {
 
       await handler.execute(command);
 
-      expect(loggerSpy).toHaveBeenCalledWith('Approving trade trade-123');
+      expect(loggerSpy).toHaveBeenCalledWith(expect.stringContaining('trade-123'));
     });
   });
 

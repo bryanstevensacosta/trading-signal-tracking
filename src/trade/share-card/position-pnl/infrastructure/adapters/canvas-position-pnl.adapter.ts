@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { createCanvas } from '@napi-rs/canvas';
+import { createCanvas, CanvasRenderingContext2D } from '@napi-rs/canvas';
 import { PositionCardData, CardResult, CardTheme } from '@trade/share-card/common/types';
 import {
   POSITION_CARD_CONFIG,
@@ -38,7 +38,7 @@ export class CanvasPositionPnlAdapter {
   }
 
   private drawBackground(
-    ctx: any,
+    ctx: CanvasRenderingContext2D,
     width: number,
     height: number,
     theme: CardTheme,
@@ -57,7 +57,7 @@ export class CanvasPositionPnlAdapter {
   }
 
   private drawHeader(
-    ctx: any,
+    ctx: CanvasRenderingContext2D,
     data: PositionCardData,
     width: number,
     theme: CardTheme,
@@ -78,7 +78,7 @@ export class CanvasPositionPnlAdapter {
   }
 
   private drawPrices(
-    ctx: any,
+    ctx: CanvasRenderingContext2D,
     data: PositionCardData,
     width: number,
     theme: CardTheme,
@@ -131,7 +131,7 @@ export class CanvasPositionPnlAdapter {
   }
 
   private drawPnL(
-    ctx: any,
+    ctx: CanvasRenderingContext2D,
     data: PositionCardData,
     width: number,
     theme: CardTheme,
@@ -153,7 +153,7 @@ export class CanvasPositionPnlAdapter {
   }
 
   private drawRR(
-    ctx: any,
+    ctx: CanvasRenderingContext2D,
     data: PositionCardData,
     width: number,
     theme: CardTheme,
@@ -183,7 +183,7 @@ export class CanvasPositionPnlAdapter {
   }
 
   private drawStatusBadge(
-    ctx: any,
+    ctx: CanvasRenderingContext2D,
     data: PositionCardData,
     width: number,
     theme: CardTheme,

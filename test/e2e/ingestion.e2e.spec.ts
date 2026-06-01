@@ -11,12 +11,29 @@ import { MessageSourceVO } from '../../src/trade/ingestion/domain/value-objects/
 import { TradeEntity } from '../../src/trade/repository/infrastructure/persistence/trade.entity';
 import { SqliteTradeAdapter } from '../../src/trade/repository/infrastructure/adapters/sqlite-trade.adapter';
 import { TradeStatus, TradeSide } from '../../src/trade/shared';
+import { LoggerPort, LOGGER_PORT } from '../../src/shared/domain/ports/logger.port';
+import { TRADE_REPOSITORY_PORT } from '../../src/trade/repository/domain/ports/trade-repository.port';
 
-describe.skip('Trade Ingestion (e2e)', () => {
+describe('Trade Ingestion (e2e)', () => {
   let commandBus: CommandBus;
   let eventBus: EventBus;
   let ingestionService: IngestionService;
   let filterService: MessageFilterService;
+
+  const mockLogger: LoggerPort = {
+    trace: jest.fn(),
+    debug: jest.fn(),
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+    fatal: jest.fn(),
+  };
+
+  const mockRepository = {
+    findPending: jest.fn().mockResolvedValue([]),
+    findById: jest.fn(),
+    update: jest.fn(),
+  };
 
   beforeAll(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -31,10 +48,11 @@ describe.skip('Trade Ingestion (e2e)', () => {
         CqrsModule.forRoot(),
       ],
       providers: [
+        { provide: LOGGER_PORT, useValue: mockLogger },
+        { provide: TRADE_REPOSITORY_PORT, useValue: mockRepository },
         IngestionService,
         MessageFilterService,
         IngestMessageHandler,
-        OnTradeReceivedHandler,
         SqliteTradeAdapter,
       ],
     }).compile();

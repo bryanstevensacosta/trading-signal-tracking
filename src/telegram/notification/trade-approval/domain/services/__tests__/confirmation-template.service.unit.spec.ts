@@ -58,7 +58,7 @@ describe('TradeApprovalService', () => {
       const trade = createParsedTrade({ symbol: 'BNBUSDT', side: TradeSide.SPOT });
       const result = template.formatConfirmation(trade, binanceInfo, 'trade-789');
 
-      expect(result.text).toContain('⚪ SPOT');
+      expect(result.text).toContain('🔵 SPOT');
     });
 
     it('should include entryMax when present', () => {

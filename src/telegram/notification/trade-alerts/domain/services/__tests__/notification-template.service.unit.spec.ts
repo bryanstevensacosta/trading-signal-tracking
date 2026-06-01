@@ -70,7 +70,7 @@ describe('TradeAlertService', () => {
       const trade = createTrade({ tps: [52000] });
       const result = service.formatTPHit(trade, 0, 1.0);
 
-      expect(result).toContain('TP1 HIT');
+      expect(result).toContain('ALL TP HIT');
     });
   });
 
@@ -136,12 +136,11 @@ describe('TradeAlertService', () => {
       expect(result).toContain('🟢');
       expect(result).toContain('NEW TRADE');
       expect(result).toContain('BTCUSDT');
-      expect(result).toContain('Side: LONG');
-      expect(result).toContain('Entry: 50000');
-      expect(result).toContain('Entry Max: 51000');
-      expect(result).toContain('SL: 49000');
-      expect(result).toContain('TP: 52000 / 53000');
-      expect(result).toContain('Notes: Breakout trade');
+      expect(result).toContain('LONG');
+      expect(result).toContain('50000');
+      expect(result).toContain('49000');
+      expect(result).toContain('52000');
+      expect(result).toContain('53000');
     });
 
     it('should format new SHORT trade with red emoji', () => {

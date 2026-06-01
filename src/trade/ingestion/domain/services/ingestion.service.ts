@@ -1,4 +1,4 @@
-import { Injectable, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { EventBus } from '@nestjs/cqrs';
 import { MessageFilterService } from './message-filter.service';
 import { MessageSourceVO } from '../value-objects/message-source.vo';
@@ -22,7 +22,6 @@ export class IngestionService {
 
   constructor(
     private readonly filterService: MessageFilterService,
-    @Inject(forwardRef(() => EventBus))
     private readonly eventBus: EventBus,
     @Inject(LOGGER_PORT) logger: LoggerPort,
   ) {

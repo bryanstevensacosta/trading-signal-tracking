@@ -153,8 +153,10 @@ describe('SendConfirmationHandler (integration)', () => {
       expect(typeof text).toBe('string');
       expect(text).toContain('Confirm Trade');
       expect(text).toContain('BTC');
-      expect(options).toHaveProperty('inline_keyboard');
-      expect(Array.isArray(options.inline_keyboard)).toBe(true);
+      const replyMarkupStr = typeof options === 'object' && options.reply_markup ? options.reply_markup : options;
+      const replyMarkup = typeof replyMarkupStr === 'string' ? JSON.parse(replyMarkupStr) : replyMarkupStr;
+      expect(replyMarkup).toHaveProperty('inline_keyboard');
+      expect(Array.isArray(replyMarkup.inline_keyboard)).toBe(true);
     });
 
     it('should store pending trade in EditStateManager', async () => {

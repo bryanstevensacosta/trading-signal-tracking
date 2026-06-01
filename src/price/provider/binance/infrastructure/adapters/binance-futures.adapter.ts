@@ -11,6 +11,7 @@ import {
 } from '../../domain/errors/binance-errors';
 import {
   BINANCE_FUTURES_REST_URL,
+  BINANCE_FUTURES_WS_URL,
   BINANCE_FUTURES_COMBINED_WS_URL,
 } from '../../constants';
 
@@ -62,7 +63,7 @@ export class BinanceFuturesAdapter implements BinanceFuturesPort, OnModuleInit, 
   private readonly config: ProviderConfig = {
     name: 'binance',
     restUrl: BINANCE_FUTURES_REST_URL,
-    wsUrl: BINANCE_FUTURES_REST_URL,
+    wsUrl: BINANCE_FUTURES_WS_URL,
     testnet: false,
     marketType: MarketType.FUTURES,
   };

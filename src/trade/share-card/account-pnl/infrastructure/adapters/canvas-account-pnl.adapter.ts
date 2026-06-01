@@ -1,10 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { createCanvas } from '@napi-rs/canvas';
+import { createCanvas, CanvasRenderingContext2D } from '@napi-rs/canvas';
 import { AccountCardData, CardResult, CardTheme } from '@trade/share-card/common/types';
 import {
   ACCOUNT_CARD_CONFIG,
   CARD_PADDING,
 } from '@trade/share-card/common/constants';
+
+type CanvasContext = CanvasRenderingContext2D;
 
 @Injectable()
 export class CanvasAccountPnlAdapter {
@@ -38,7 +40,7 @@ export class CanvasAccountPnlAdapter {
   }
 
   private drawBackground(
-    ctx: any,
+    ctx: CanvasContext,
     width: number,
     height: number,
     theme: CardTheme,
@@ -57,7 +59,7 @@ export class CanvasAccountPnlAdapter {
   }
 
   private drawHeader(
-    ctx: any,
+    ctx: CanvasContext,
     data: AccountCardData,
     width: number,
     theme: CardTheme,
@@ -79,7 +81,7 @@ export class CanvasAccountPnlAdapter {
   }
 
   private drawTotalPnL(
-    ctx: any,
+    ctx: CanvasContext,
     data: AccountCardData,
     width: number,
     theme: CardTheme,
@@ -98,7 +100,7 @@ export class CanvasAccountPnlAdapter {
   }
 
   private drawPeriodPnL(
-    ctx: any,
+    ctx: CanvasContext,
     data: AccountCardData,
     width: number,
     theme: CardTheme,
@@ -117,7 +119,7 @@ export class CanvasAccountPnlAdapter {
   }
 
   private drawStats(
-    ctx: any,
+    ctx: CanvasContext,
     data: AccountCardData,
     width: number,
     theme: CardTheme,
@@ -144,7 +146,7 @@ export class CanvasAccountPnlAdapter {
   }
 
   private drawWinRate(
-    ctx: any,
+    ctx: CanvasContext,
     data: AccountCardData,
     width: number,
     theme: CardTheme,

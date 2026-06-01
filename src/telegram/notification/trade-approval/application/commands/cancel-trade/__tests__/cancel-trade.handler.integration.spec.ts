@@ -87,6 +87,7 @@ describe('CancelTradeHandler (integration)', () => {
 
       expect(mockRepository.update).toHaveBeenCalledWith('trade-123', {
         status: TradeStatus.CANCELLED,
+        cancelledBy: 'user',
       });
     });
 

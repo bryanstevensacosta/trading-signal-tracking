@@ -11,6 +11,7 @@ import {
 } from '../../domain/errors/binance-errors';
 import {
   BINANCE_SPOT_REST_URL,
+  BINANCE_SPOT_WS_URL,
   BINANCE_SPOT_COMBINED_WS_URL,
 } from '../../constants';
 
@@ -44,7 +45,7 @@ export class BinanceSpotAdapter implements BinanceSpotPort, OnModuleInit, OnModu
   private readonly config: ProviderConfig = {
     name: 'binance',
     restUrl: BINANCE_SPOT_REST_URL,
-    wsUrl: BINANCE_SPOT_REST_URL,
+    wsUrl: BINANCE_SPOT_WS_URL,
     testnet: false,
     marketType: MarketType.SPOT,
   };

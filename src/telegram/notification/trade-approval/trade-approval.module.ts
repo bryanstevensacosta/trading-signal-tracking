@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { BinanceInfoService } from './domain/services/binance-info.service';
 import { TradeApprovalService } from './domain/services/confirmation-template.service';
 import { EditStateManager } from './domain/services/edit-state-manager.service';
+import { OnPendingTradeExpiredHandler } from './application/event-handlers/on-pending-trade-expired.handler';
 import { SendConfirmationHandler } from './application/commands/send-confirmation/handler';
 import { ApproveTradeHandler } from './application/commands/approve-trade/handler';
 import { CancelTradeHandler } from './application/commands/cancel-trade/handler';
@@ -28,6 +29,10 @@ export const COMMAND_HANDLERS = [
   EditTradeTPHandler,
 ];
 
+export const EVENT_HANDLERS = [
+  OnPendingTradeExpiredHandler,
+];
+
 @Module({
   imports: [
     CqrsModule,
@@ -47,6 +52,7 @@ export const COMMAND_HANDLERS = [
     TradeApprovalService,
     EditStateManager,
     ...COMMAND_HANDLERS,
+    ...EVENT_HANDLERS,
   ],
   exports: [BinanceInfoService, TradeApprovalService, EditStateManager],
 })

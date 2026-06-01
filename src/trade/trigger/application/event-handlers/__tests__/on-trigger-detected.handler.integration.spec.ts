@@ -6,6 +6,7 @@ import { TransitionStateCommand } from '@trade/state/application/commands/transi
 import { Trade, TradeStatus, TradeSide, TriggerType, OrderType } from '@trade/shared';
 import { TRADE_REPOSITORY_PORT } from '@trade/repository/domain/ports/trade-repository.port';
 import { LOGGER_PORT, LoggerPort } from '@shared/domain/ports/logger.port';
+import { FUTURES_PORT } from '@price/provider/binance/tokens';
 
 describe('OnTriggerDetectedHandler', () => {
   let handler: OnTriggerDetectedHandler;
@@ -21,7 +22,12 @@ describe('OnTriggerDetectedHandler', () => {
     fatal: jest.fn(),
   };
 
+  let mockFuturesExchange: { getSymbolPrecision: jest.Mock };
+
   beforeEach(async () => {
+    mockFuturesExchange = {
+      getSymbolPrecision: jest.fn().mockReturnValue(2),
+    };
     const mockCommandBus = {
       execute: jest.fn(),
     };
@@ -37,6 +43,7 @@ describe('OnTriggerDetectedHandler', () => {
         { provide: CommandBus, useValue: mockCommandBus },
         { provide: TRADE_REPOSITORY_PORT, useValue: mockRepository },
         { provide: LOGGER_PORT, useValue: mockLogger },
+        { provide: FUTURES_PORT, useValue: mockFuturesExchange },
       ],
     }).compile();
 

@@ -57,14 +57,14 @@ describe('TriggerDetectorService (property-based)', () => {
           fc.float({ min: 1000, max: 100000 }),
           fc.float({ min: 1000, max: 100000 }),
           fc.float({ min: 1000, max: 100000 }),
-          (entry: number, entryMax: number, ask: number) => {
-            if (isNaN(entry) || isNaN(entryMax) || isNaN(ask)) return true;
+          (entry: number, entryMax: number, lastPrice: number) => {
+            if (isNaN(entry) || isNaN(entryMax) || isNaN(lastPrice)) return true;
             if (entry === entryMax) return true;
 
             const maxEntry = Math.max(entry, entryMax);
             const minEntry = Math.min(entry, entryMax);
 
-            const validAsk = Math.min(ask, maxEntry + 100);
+            const validLast = Math.min(lastPrice, maxEntry + 100);
 
             const trade = createTrade({
               status: TradeStatus.PENDING,
@@ -72,11 +72,11 @@ describe('TriggerDetectorService (property-based)', () => {
               entry,
               entryMax: maxEntry,
             });
-            const price = createPrice({ ask: validAsk });
+            const price = createPrice({ last: validLast });
 
             const result = service.checkEntryHit(trade, price);
 
-            if (validAsk >= entry && validAsk <= maxEntry) {
+            if (validLast >= entry && validLast <= maxEntry) {
               expect(result.triggered).toBe(true);
             }
           }
@@ -293,11 +293,12 @@ it('already hit TPs are skipped', () => {
     it('entry is checked before TP', () => {
       const trade = createTrade({
         status: TradeStatus.PENDING,
+        orderType: OrderType.LIMIT,
         entry: 50000,
         entryMax: 50000,
         tps: [50000],
       });
-      const price = createPrice({ ask: 50000, bid: 50000 });
+      const price = createPrice({ last: 50000, ask: 50000, bid: 50000 });
 
       const result = service.checkAllTriggers(trade, price);
 
@@ -307,11 +308,12 @@ it('already hit TPs are skipped', () => {
     it('TP is checked before SL', () => {
       const trade = createTrade({
         status: TradeStatus.ACTIVE,
+        orderType: OrderType.LIMIT,
         entry: 50000,
         sl: 49000,
         tps: [52000],
       });
-      const price = createPrice({ bid: 52000, ask: 52000 });
+      const price = createPrice({ last: 52000, bid: 52000, ask: 52001 });
 
       const result = service.checkAllTriggers(trade, price);
 

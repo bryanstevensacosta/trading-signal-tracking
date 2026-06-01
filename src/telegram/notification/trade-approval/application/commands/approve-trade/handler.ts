@@ -11,7 +11,6 @@ import { StartMonitoringCommand } from '@trade/trigger/application/commands/star
 import { Trade, TradeStatus, TradeSide } from '@trade/shared';
 import { TelegramConfig } from '@config/telegram.config';
 import { getTelegramConfig } from '@config/telegram.config';
-import { TradeListService } from '@telegram/notification/trade-list/domain/services/trade-list.service';
 import { PRICE_CACHE_PORT, PriceCachePort } from '@price/cache/domain/ports/price-cache.port';
 import { TELEGRAM_NOTIFICATION_LOG_PORT, TelegramNotificationLogPort } from '../../../../shared/domain/ports/telegram-notification-log.port';
 import { NotificationType, NotificationChannel } from '../../../../shared/domain/entities/telegram-notification-log.entity';
@@ -31,7 +30,6 @@ export class ApproveTradeHandler implements ICommandHandler<ApproveTradeCommand>
     @Inject(TELEGRAM_PORT) private readonly telegram: TelegramPort,
     private readonly templates: TradeApprovalService,
     private readonly notificationTemplates: TradeAlertService,
-    @Inject(forwardRef(() => TradeListService)) private readonly displayService: TradeListService,
     @Inject(forwardRef(() => PRICE_CACHE_PORT)) private readonly priceCache: PriceCachePort,
     @Inject(TELEGRAM_NOTIFICATION_LOG_PORT) private readonly notificationLog: TelegramNotificationLogPort,
     private readonly triggerDetector: TriggerDetectorService,
@@ -116,8 +114,6 @@ export class ApproveTradeHandler implements ICommandHandler<ApproveTradeCommand>
         chatId: telegramConfig.groupId?.toString(),
       });
     }
-
-    await this.sendTradeListUpdate(telegramConfig);
   }
 
   private async getCurrentPrice(symbol: string, side: TradeSide): Promise<number | null> {
@@ -200,8 +196,6 @@ export class ApproveTradeHandler implements ICommandHandler<ApproveTradeCommand>
         }
       }
     }
-
-    await this.sendTradeListUpdate(telegramConfig);
   }
 
   private async handleNormalFlow(
@@ -234,18 +228,5 @@ export class ApproveTradeHandler implements ICommandHandler<ApproveTradeCommand>
         chatId: telegramConfig.groupId?.toString(),
       });
     }
-
-    await this.sendTradeListUpdate(telegramConfig);
-  }
-
-  private async sendTradeListUpdate(telegramConfig: TelegramConfig): Promise<void> {
-    const allTrades = await this.repository.findAll();
-    const symbols = [...new Set(allTrades.map((t: Trade) => t.symbol))];
-    const prices = this.priceCache.getBySymbols(symbols);
-    const result = this.displayService.formatTradeList(allTrades, prices, 1, 100);
-    const tradeListMessage = result.trades.join('\n\n');
-    this.logger.debug(`Message for group (trade list):\n${tradeListMessage}`);
-    this.logger.debug(`Sending to group ${telegramConfig.groupId} with threadId=${telegramConfig.tradeListThreadId}`);
-    await this.telegram.sendMessage(telegramConfig.groupId, tradeListMessage, { parse_mode: 'HTML' }, telegramConfig.tradeListThreadId);
   }
 }

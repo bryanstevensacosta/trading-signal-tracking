@@ -70,7 +70,7 @@ describe('Trade Engine (e2e)', () => {
           entry: 50000,
           entryMax: 49900,
         });
-        const price = createPrice({ bid: 49950 });
+        const price = createPrice({ bid: 49950, ask: 49951, last: 49950 });
 
         const result = triggerDetector.checkEntryHit(trade, price);
 
@@ -164,7 +164,7 @@ describe('Trade Engine (e2e)', () => {
           entryMax: 50000,
           tps: [50000],
         });
-        const price = createPrice({ ask: 50000, bid: 50000 });
+        const price = createPrice({ ask: 50000, bid: 50000, last: 50000 });
 
         const result = triggerDetector.checkAllTriggers(trade, price);
 
