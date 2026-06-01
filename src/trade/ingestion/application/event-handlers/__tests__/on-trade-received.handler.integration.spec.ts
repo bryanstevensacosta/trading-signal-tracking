@@ -7,6 +7,7 @@ import { ParseTradeCommand } from '../../../../parsing/application/commands/pars
 import { SendConfirmationCommand } from '@telegram/notification/trade-approval/application/commands/send-confirmation/command';
 import { TradeSide } from '@trade/shared';
 import { LoggerPort, LOGGER_PORT } from '@shared/domain/ports/logger.port';
+import { PendingCleanupService } from '../../../../state/domain/services/pending-cleanup.service';
 
 const mockLogger: LoggerPort = {
   trace: jest.fn(),
@@ -21,6 +22,10 @@ describe('OnTradeReceivedHandler', () => {
   let handler: OnTradeReceivedHandler;
   let commandBus: { execute: jest.Mock };
 
+  const mockPendingCleanupService = {
+    cancelAllPending: jest.fn().mockResolvedValue(0),
+  };
+
   beforeEach(async () => {
     commandBus = {
       execute: jest.fn(),
@@ -31,6 +36,7 @@ describe('OnTradeReceivedHandler', () => {
         OnTradeReceivedHandler,
         { provide: CommandBus, useValue: commandBus },
         { provide: LOGGER_PORT, useValue: mockLogger },
+        { provide: PendingCleanupService, useValue: mockPendingCleanupService },
       ],
     }).compile();
 

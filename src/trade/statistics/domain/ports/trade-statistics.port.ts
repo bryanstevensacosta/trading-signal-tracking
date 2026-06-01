@@ -1,10 +1,15 @@
 import { Trade, TradeStatus } from '../../../shared/types';
 
+export type ProfitabilityStatus = 'PROFITABLE' | 'BREAKEVEN' | 'UNPROFITABLE';
+
 export interface TradeStatistics {
   totalTrades: number;
   closedTrades: number;
   winRate: number;
   averageRR: number;
+  totalRR: number;
+  breakEvenRate: number;
+  profitability: ProfitabilityStatus;
   bestTrade: { symbol: string; rr: number; pnl: number; closedAt: Date } | null;
   worstTrade: { symbol: string; rr: number; pnl: number; closedAt: Date } | null;
   tradesThisWeek: number;

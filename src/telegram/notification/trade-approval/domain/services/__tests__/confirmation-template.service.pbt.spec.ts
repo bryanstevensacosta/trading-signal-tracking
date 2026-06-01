@@ -117,7 +117,7 @@ describe('TradeApprovalService (property-based)', () => {
           const result = template.formatConfirmation(trade, info, tradeId);
           if (trade.side === 'LONG') return result.text.includes('🟢');
           if (trade.side === 'SHORT') return result.text.includes('🔴');
-          if (trade.side === 'SPOT') return result.text.includes('⚪');
+          if (trade.side === 'SPOT') return result.text.includes('🔵');
           return true;
         }),
         { numRuns: 50 }

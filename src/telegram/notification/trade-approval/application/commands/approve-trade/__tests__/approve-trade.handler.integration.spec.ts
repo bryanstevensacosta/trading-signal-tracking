@@ -39,7 +39,7 @@ describe('ApproveTradeHandler (integration)', () => {
     sourceMessage: 'LONG BTCUSDT 50000',
     sourceChat: 12345,
     tpsHit: [],
-    notificationMessageId: null,
+    tradeAlertsMessageId: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     closedAt: null,
@@ -74,25 +74,27 @@ describe('ApproveTradeHandler (integration)', () => {
       formatTradeCreated: jest.fn().mockReturnValue('🟢 NEW TRADE - BTCUSDT\n\nSide: LONG\nEntry: 50000\nSL: 49000\nTP: 52000'),
     };
 
-    const mockDisplayService = {
-      formatTradeList: jest.fn().mockReturnValue({
-        trades: ['📊 TRADES (2)', '🟢 LONG BTCUSDT ✅ ACTIVE'],
-        page: 1,
-        pageSize: 100,
-        total: 2,
-        totalPages: 1,
-      }),
+    const mockNotificationLog = {
+      logSent: jest.fn(),
+      wasSent: jest.fn().mockResolvedValue(false),
+      getLastSent: jest.fn().mockResolvedValue(null),
+      getForTrade: jest.fn().mockResolvedValue([]),
     };
 
     const mockPriceCache = {
       getBySymbols: jest.fn().mockReturnValue([]),
     };
 
-    const mockNotificationLog = {
-      logSent: jest.fn(),
-      wasSent: jest.fn().mockResolvedValue(false),
-      getLastSent: jest.fn().mockResolvedValue(null),
-      getForTrade: jest.fn().mockResolvedValue([]),
+    const mockTriggerDetector = {
+      isEntryAlreadyHit: jest.fn().mockReturnValue(false),
+      getExecutedEntryPrice: jest.fn().mockReturnValue(null),
+    };
+
+    const mockSpotExchange = {
+      getTicker: jest.fn().mockResolvedValue({ last: 50000, symbol: 'BTCUSDT', bid: 49990, ask: 50010, timestamp: new Date() }),
+    };
+    const mockFuturesExchange = {
+      getTicker: jest.fn().mockResolvedValue({ last: 50000, symbol: 'BTCUSDT', bid: 49990, ask: 50010, timestamp: new Date() }),
     };
 
     handler = new ApproveTradeHandler(
@@ -102,9 +104,11 @@ describe('ApproveTradeHandler (integration)', () => {
       mockTelegram as any,
       mockTemplate as any,
       mockNotificationTemplates as any,
-      mockDisplayService as any,
       mockPriceCache as any,
       mockNotificationLog as any,
+      mockTriggerDetector as any,
+      mockSpotExchange as any,
+      mockFuturesExchange as any,
     );
   });
 
@@ -121,7 +125,7 @@ describe('ApproveTradeHandler (integration)', () => {
       expect(mockRepository.findById).toHaveBeenCalledWith('trade-123');
     });
 
-    it('should start monitoring and update notificationMessageId', async () => {
+    it('should start monitoring and update tradeAlertsMessageId', async () => {
       const command = new ApproveTradeCommand('trade-123', 12345);
 
       await handler.execute(command);
@@ -132,7 +136,7 @@ describe('ApproveTradeHandler (integration)', () => {
         })
       );
       expect(mockRepository.update).toHaveBeenCalledWith('trade-123', {
-        notificationMessageId: expect.any(Number),
+        tradeAlertsMessageId: expect.any(Number),
       });
     });
 
@@ -175,7 +179,7 @@ describe('ApproveTradeHandler (integration)', () => {
 
       await handler.execute(command);
 
-      expect(loggerSpy).toHaveBeenCalledWith('Approving trade trade-123');
+      expect(loggerSpy).toHaveBeenCalledWith(expect.stringContaining('trade-123'));
     });
   });
 

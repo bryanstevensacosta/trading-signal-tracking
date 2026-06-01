@@ -1,14 +1,14 @@
 import { Controller, Get, Param } from '@nestjs/common';
 import { Inject } from '@nestjs/common';
 import { PriceStreamService } from '@price/stream/domain/services/price-stream.service';
-import { TradingEngineService } from '@trade/engine/domain/services/trading-engine.service';
+import { TriggerOrchestratorService } from '@trade/trigger/domain/services/trigger-orchestrator.service';
 import { TradeRepositoryPort, TRADE_REPOSITORY_PORT } from '@trade/repository/domain/ports/trade-repository.port';
 
 @Controller('health')
 export class HealthController {
   constructor(
     private readonly priceStream: PriceStreamService,
-    private readonly engine: TradingEngineService,
+    private readonly engine: TriggerOrchestratorService,
     @Inject(TRADE_REPOSITORY_PORT) private readonly repository: TradeRepositoryPort,
   ) {}
 

@@ -128,7 +128,7 @@ export class SqliteTradeAdapter implements TradeRepositoryPort {
     if (input.closedAt !== undefined) updateData.closedAt = input.closedAt;
     if (input.entryExecutedPrice !== undefined) updateData.entryExecutedPrice = input.entryExecutedPrice;
     if (input.entryExecutedAt !== undefined) updateData.entryExecutedAt = input.entryExecutedAt;
-    if (input.notificationMessageId !== undefined) updateData.notificationMessageId = input.notificationMessageId;
+    if (input.tradeAlertsMessageId !== undefined) updateData.tradeAlertsMessageId = input.tradeAlertsMessageId;
     if (input.approvedAt !== undefined) updateData.approvedAt = input.approvedAt;
 
     await this.repository.update(id, updateData);

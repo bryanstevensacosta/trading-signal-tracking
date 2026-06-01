@@ -1,18 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Trade, ClosedTradeStatus, TradeStatus } from '../../../shared/types';
+import { isClosedTrade } from '../../../shared/helpers/state-helpers';
 import { TradeHistoryPort, HistoryFilters } from '../../domain/ports/trade-history.port';
 import { TRADE_REPOSITORY_PORT, TradeRepositoryPort } from '../../../repository/domain/ports/trade-repository.port';
 
 @Injectable()
 export class TradeHistoryAdapter implements TradeHistoryPort {
-  private readonly CLOSED_STATUSES: ClosedTradeStatus[] = [
-    TradeStatus.CLOSED_WIN,
-    TradeStatus.CLOSED_PARTIAL,
-    TradeStatus.CLOSED_LOSS,
-    TradeStatus.CLOSED_BREAKEVEN,
-    TradeStatus.CLOSED_MANUAL,
-  ];
-
   constructor(
     @Inject(TRADE_REPOSITORY_PORT) private readonly repository: TradeRepositoryPort,
   ) {}
@@ -85,7 +78,7 @@ export class TradeHistoryAdapter implements TradeHistoryPort {
   }
 
   private isClosedTrade(status: TradeStatus): boolean {
-    return this.CLOSED_STATUSES.includes(status as ClosedTradeStatus) || status === TradeStatus.CANCELLED;
+    return isClosedTrade(status);
   }
 
   private applyFilters(trades: Trade[], filters: HistoryFilters): Trade[] {

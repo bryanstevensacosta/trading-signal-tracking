@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, FindOptionsWhere } from 'typeorm';
 import { TelegramNotificationLogEntity, NotificationType, NotificationChannel } from '../../domain/entities/telegram-notification-log.entity';
 import { TelegramNotificationLogPort, TELEGRAM_NOTIFICATION_LOG_PORT } from '../../domain/ports/telegram-notification-log.port';
 
@@ -31,15 +31,18 @@ export class SqliteTelegramNotificationLogAdapter implements TelegramNotificatio
   }
 
   async wasSent(tradeId: string, type: NotificationType, channel: NotificationChannel, tpIndex?: number): Promise<boolean> {
-    const query: any = { tradeId, type, channel };
+    const whereClause: FindOptionsWhere<TelegramNotificationLogEntity> = {
+      tradeId,
+      type,
+      channel,
+    };
+    
     if (tpIndex !== undefined) {
-      query.tpIndex = tpIndex;
-    } else {
-      query.tpIndex = null;
+      whereClause.tpIndex = tpIndex;
     }
     
     const existing = await this.repository.findOne({
-      where: query,
+      where: whereClause,
     });
     return !!existing;
   }

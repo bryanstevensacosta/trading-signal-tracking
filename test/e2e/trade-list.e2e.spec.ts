@@ -90,7 +90,7 @@ describe('Telegram Notification Trade List (e2e)', () => {
         sourceMessage: '',
         sourceChat: 12345,
         tpsHit: [],
-        notificationMessageId: null,
+        tradeAlertsMessageId: null,
         createdAt: new Date(),
         updatedAt: new Date(),
         closedAt: null,

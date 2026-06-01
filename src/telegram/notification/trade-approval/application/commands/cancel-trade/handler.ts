@@ -28,7 +28,7 @@ export class CancelTradeHandler implements ICommandHandler<CancelTradeConfirmati
     const trade = await this.repository.findById(command.tradeId);
     if (!trade) {
       this.logger.error(`Trade ${command.tradeId} not found`);
-      await this.telegram.sendMessage(command.chatId, `❌ Trade not found.`, undefined, telegramConfig.singleTradeThreadId);
+      await this.telegram.sendMessage(command.chatId, `❌ Trade not found.`, undefined, telegramConfig.tradeAlertsThreadId);
       return;
     }
 
@@ -36,6 +36,6 @@ export class CancelTradeHandler implements ICommandHandler<CancelTradeConfirmati
     this.logger.info(`Trade ${command.tradeId} marked as CANCELLED`);
 
     const message = this.templates.formatTradeClosed(trade.symbol);
-    await this.telegram.sendMessage(command.chatId, message, undefined, telegramConfig.singleTradeThreadId);
+    await this.telegram.sendMessage(command.chatId, message, undefined, telegramConfig.tradeAlertsThreadId);
   }
 }

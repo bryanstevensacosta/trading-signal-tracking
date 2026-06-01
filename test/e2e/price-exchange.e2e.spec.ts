@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { PriceExchangeModule } from '../../src/price/exchange/price-exchange.module';
-import { BinanceSpotAdapter } from '../../src/price/exchange/infrastructure/adapters/binance-spot.adapter';
-import { BinanceFuturesAdapter } from '../../src/price/exchange/infrastructure/adapters/binance-futures.adapter';
+import { BinanceProviderModule } from '../../src/price/provider/binance/binance.module';
+import { BinanceSpotAdapter } from '../../src/price/provider/binance/infrastructure/adapters/binance-spot.adapter';
+import { BinanceFuturesAdapter } from '../../src/price/provider/binance/infrastructure/adapters/binance-futures.adapter';
 import { MarketType } from '../../src/trade/shared';
 
 describe('PriceExchangeModule (e2e) - Spot & Futures', () => {
@@ -11,7 +11,7 @@ describe('PriceExchangeModule (e2e) - Spot & Futures', () => {
 
   beforeAll(async () => {
     module = await Test.createTestingModule({
-      imports: [PriceExchangeModule],
+      imports: [BinanceProviderModule],
     }).compile();
 
     spotAdapter = module.get<BinanceSpotAdapter>(BinanceSpotAdapter);

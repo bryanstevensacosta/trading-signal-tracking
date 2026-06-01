@@ -26,18 +26,18 @@ export class OnTradeModifiedHandler implements IEventHandler<TradeUpdatedEvent> 
     const message = this.templates.formatModification(trade, field, oldValue, newValue);
 
     const telegramConfig = getTelegramConfig();
-    this.logger.debug(`Config: groupId=${telegramConfig.groupId}, singleTradeThreadId=${telegramConfig.singleTradeThreadId}`);
+    this.logger.debug(`Config: groupId=${telegramConfig.groupId}, tradeAlertsThreadId=${telegramConfig.tradeAlertsThreadId}`);
 
     const chatId = trade.sourceChat || this.getDefaultChatId();
     this.logger.debug(`Sending to private chat ${chatId}`);
     await this.telegram.sendMessage(chatId, message);
 
-    this.logger.debug(`Sending to group ${telegramConfig.groupId} with threadId=${telegramConfig.singleTradeThreadId}`);
+    this.logger.debug(`Sending to group ${telegramConfig.groupId} with threadId=${telegramConfig.tradeAlertsThreadId}`);
     await this.telegram.sendMessage(
       telegramConfig.groupId,
       message,
       undefined,
-      telegramConfig.singleTradeThreadId,
+      telegramConfig.tradeAlertsThreadId,
     );
   }
 

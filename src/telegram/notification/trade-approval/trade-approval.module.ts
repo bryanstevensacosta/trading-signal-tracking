@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { BinanceInfoService } from './domain/services/binance-info.service';
 import { TradeApprovalService } from './domain/services/confirmation-template.service';
 import { EditStateManager } from './domain/services/edit-state-manager.service';
+import { OnPendingTradeExpiredHandler } from './application/event-handlers/on-pending-trade-expired.handler';
 import { SendConfirmationHandler } from './application/commands/send-confirmation/handler';
 import { ApproveTradeHandler } from './application/commands/approve-trade/handler';
 import { CancelTradeHandler } from './application/commands/cancel-trade/handler';
@@ -14,10 +15,11 @@ import { TradeRepositoryModule } from '@trade/repository/trade-repository.module
 import { TradeAlertsModule } from '@telegram/notification/trade-alerts/telegram-notification-single.module';
 import { TradeListModule } from '@telegram/notification/trade-list/telegram-notification-trade-list.module';
 import { PriceCacheModule } from '@price/cache/price-cache.module';
-import { PriceExchangeModule } from '@price/exchange/price-exchange.module';
+import { BinanceProviderModule } from '@price/provider/binance/binance.module';
 import { LoggerModule } from '@shared';
 import { TelegramCoreModule } from '@telegram/core/telegram-core.module';
 import { TelegramNotificationSharedModule } from '../shared/telegram-notification-shared.module';
+import { TriggerModule } from '@trade/trigger/trigger.module';
 
 export const COMMAND_HANDLERS = [
   SendConfirmationHandler,
@@ -25,6 +27,10 @@ export const COMMAND_HANDLERS = [
   CancelTradeHandler,
   EditTradeFieldHandler,
   EditTradeTPHandler,
+];
+
+export const EVENT_HANDLERS = [
+  OnPendingTradeExpiredHandler,
 ];
 
 @Module({
@@ -36,15 +42,17 @@ export const COMMAND_HANDLERS = [
     forwardRef(() => TradeAlertsModule),
     forwardRef(() => TradeListModule),
     forwardRef(() => PriceCacheModule),
-    PriceExchangeModule,
+    BinanceProviderModule,
     forwardRef(() => TelegramCoreModule),
     TelegramNotificationSharedModule,
+    forwardRef(() => TriggerModule),
   ],
   providers: [
     BinanceInfoService,
     TradeApprovalService,
     EditStateManager,
     ...COMMAND_HANDLERS,
+    ...EVENT_HANDLERS,
   ],
   exports: [BinanceInfoService, TradeApprovalService, EditStateManager],
 })

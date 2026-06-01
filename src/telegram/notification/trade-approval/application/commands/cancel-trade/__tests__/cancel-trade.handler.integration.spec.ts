@@ -38,7 +38,7 @@ describe('CancelTradeHandler (integration)', () => {
     sourceMessage: 'LONG BTCUSDT 50000',
     sourceChat: 12345,
     tpsHit: [],
-    notificationMessageId: null,
+    tradeAlertsMessageId: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     closedAt: null,
@@ -87,6 +87,7 @@ describe('CancelTradeHandler (integration)', () => {
 
       expect(mockRepository.update).toHaveBeenCalledWith('trade-123', {
         status: TradeStatus.CANCELLED,
+        cancelledBy: 'user',
       });
     });
 

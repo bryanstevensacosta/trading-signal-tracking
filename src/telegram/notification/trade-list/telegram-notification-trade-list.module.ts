@@ -5,7 +5,6 @@ import { TradeListCacheService } from './domain/services/trade-list-cache.servic
 import { NotificationBatcherService } from './domain/services/notification-batcher.service';
 import { SendTradeListHandler } from './application/commands/send-trade-list/handler';
 import { RefreshTradeListHandler } from './application/commands/refresh-trade-list/handler';
-import { OnTradeListRefreshHandler } from './application/event-handlers/on-state-changed.handler';
 import { TradeRepositoryModule } from '@trade/repository/trade-repository.module';
 import { TradeAlertsModule } from '@telegram/notification/trade-alerts/telegram-notification-single.module';
 import { TradeListNotifierAdapterProvider } from './infrastructure/adapters/trade-list-notifier.adapter';
@@ -15,7 +14,6 @@ import { TelegramCoreModule } from '@telegram/core/telegram-core.module';
 import { TelegramNotificationSharedModule } from '../shared/telegram-notification-shared.module';
 
 const CommandHandlers = [SendTradeListHandler, RefreshTradeListHandler];
-const EventHandlers = [OnTradeListRefreshHandler];
 
 @Module({
   imports: [
@@ -33,7 +31,6 @@ const EventHandlers = [OnTradeListRefreshHandler];
     NotificationBatcherService,
     TradeListNotifierAdapterProvider,
     ...CommandHandlers,
-    ...EventHandlers,
   ],
   exports: [
     TradeListService,

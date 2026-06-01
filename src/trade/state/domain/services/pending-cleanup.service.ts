@@ -1,9 +1,9 @@
 import { Injectable, OnModuleInit, OnModuleDestroy, Inject } from '@nestjs/common';
+import { EventBus } from '@nestjs/cqrs';
 import { LOGGER_PORT, LoggerPort } from '@shared/domain/ports/logger.port';
 import { TRADE_REPOSITORY_PORT, TradeRepositoryPort } from '@trade/repository/domain/ports/trade-repository.port';
-import { TELEGRAM_PORT, TelegramPort } from '@telegram/core/domain/ports/telegram.port';
 import { TradeStatus, CancelledBy } from '@trade/shared/types';
-import { EditStateManager } from '@telegram/notification/trade-approval/domain/services/edit-state-manager.service';
+import { PendingTradeExpiredEvent } from '../events/pending-trade-expired.event';
 
 @Injectable()
 export class PendingCleanupService implements OnModuleInit, OnModuleDestroy {
@@ -12,8 +12,7 @@ export class PendingCleanupService implements OnModuleInit, OnModuleDestroy {
 
   constructor(
     @Inject(TRADE_REPOSITORY_PORT) private readonly repository: TradeRepositoryPort,
-    private readonly editStateManager: EditStateManager,
-    @Inject(TELEGRAM_PORT) private readonly telegram: TelegramPort,
+    private readonly eventBus: EventBus,
     @Inject(LOGGER_PORT) private readonly logger: LoggerPort,
   ) {}
 
@@ -79,22 +78,9 @@ export class PendingCleanupService implements OnModuleInit, OnModuleDestroy {
 
     await this.repository.update(tradeId, { status: TradeStatus.CANCELLED, cancelledBy });
 
-    if (trade.sourceChat) {
-      const pendingState = this.editStateManager.getPendingTrade(trade.sourceChat, tradeId);
-      if (pendingState?.confirmationMessageId) {
-        try {
-          await this.telegram.editMessage(
-            trade.sourceChat,
-            pendingState.confirmationMessageId,
-            `❌ ${reason}\n\nTrade ${trade.symbol} has been cancelled.`,
-          );
-        } catch (error) {
-          this.logger.warn(`Could not edit message: ${error}`);
-        }
-      }
-
-      this.editStateManager.removePendingTrade(trade.sourceChat, tradeId);
-    }
+    await this.eventBus.publish(
+      new PendingTradeExpiredEvent(trade, reason, cancelledBy),
+    );
 
     this.logger.info(`Trade ${tradeId} cancelled: ${reason}`);
     return true;

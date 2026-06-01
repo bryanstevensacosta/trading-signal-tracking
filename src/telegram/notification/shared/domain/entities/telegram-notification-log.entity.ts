@@ -4,6 +4,7 @@ import {
   Column,
   CreateDateColumn,
   Index,
+  BeforeInsert,
 } from 'typeorm';
 
 export enum NotificationType {
@@ -26,6 +27,15 @@ export enum NotificationChannel {
   LIST = 'list',
 }
 
+function generateShortId(): string {
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
+  for (let i = 0; i < 8; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
+
 /**
  * Entity for tracking sent Telegram notifications.
  * Prevents duplicate notifications and enables idempotent processing.
@@ -34,8 +44,15 @@ export enum NotificationChannel {
 @Index(['tradeId', 'type', 'tpIndex', 'channel'], { unique: true })
 @Index(['tradeId', 'channel'])
 export class TelegramNotificationLogEntity {
-  @PrimaryColumn({ type: 'varchar', length: 16 })
+  @PrimaryColumn({ type: 'varchar', length: 8, unique: true })
   id: string;
+
+  @BeforeInsert()
+  setId() {
+    if (!this.id) {
+      this.id = generateShortId();
+    }
+  }
 
   @Column({ type: 'varchar', length: 8, nullable: true })
   tradeId: string | null;

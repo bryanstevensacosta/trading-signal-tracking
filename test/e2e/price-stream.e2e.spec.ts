@@ -1,37 +1,55 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { PriceStreamModule } from '../../src/price/stream/price-stream.module';
-import { PriceStreamService } from '../../src/price/stream/domain/services/price-stream.service';
-import { BinanceExchangeAdapter } from '../../src/price/exchange/infrastructure/adapters/binance.adapter';
+import { PriceStreamService, MarketType } from '../../src/price/stream/domain/services/price-stream.service';
+import { SPOT_PORT, FUTURES_PORT } from '../../src/price/provider/binance/tokens';
 import { EventBus } from '@nestjs/cqrs';
+import { Price } from '@trade/shared';
 
-describe.skip('PriceStreamModule (e2e)', () => {
+describe('PriceStreamModule (e2e)', () => {
   let module: TestingModule;
   let service: PriceStreamService;
   let mockSubscribeToTicker: jest.Mock;
 
+  const mockLogger = {
+    trace: jest.fn(),
+    debug: jest.fn(),
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+    fatal: jest.fn(),
+  };
+
+  const mockSpotExchange = {
+    subscribeToTicker: jest.fn(),
+    connect: jest.fn().mockResolvedValue(undefined),
+    disconnect: jest.fn().mockResolvedValue(undefined),
+    isConnected: jest.fn().mockReturnValue(true),
+    getTicker: jest.fn(),
+    getMultipleTickers: jest.fn(),
+    subscribeToMultipleTickers: jest.fn(),
+  };
+
+  const mockFuturesExchange = {
+    subscribeToTicker: jest.fn(),
+    connect: jest.fn().mockResolvedValue(undefined),
+    disconnect: jest.fn().mockResolvedValue(undefined),
+    isConnected: jest.fn().mockReturnValue(true),
+    getTicker: jest.fn(),
+    getMultipleTickers: jest.fn(),
+    subscribeToMultipleTickers: jest.fn(),
+  };
+
   beforeAll(async () => {
-    mockSubscribeToTicker = jest.fn();
+    mockSubscribeToTicker = jest.fn().mockReturnValue(jest.fn());
 
     module = await Test.createTestingModule({
-      imports: [PriceStreamModule],
-    })
-      .overrideProvider(BinanceExchangeAdapter)
-      .useValue({
-        subscribeToTicker: mockSubscribeToTicker,
-        connect: jest.fn(),
-        disconnect: jest.fn(),
-        isConnected: jest.fn(),
-        getTicker: jest.fn(),
-        getMultipleTickers: jest.fn(),
-        subscribeToMultipleTickers: jest.fn(),
-        getConfig: jest.fn().mockReturnValue({
-          name: 'binance',
-          restUrl: 'https://api.binance.com',
-          wsUrl: 'wss://stream.binance.com:9443',
-          testnet: false,
-        }),
-      })
-      .compile();
+      providers: [
+        PriceStreamService,
+        { provide: SPOT_PORT, useValue: mockSpotExchange },
+        { provide: FUTURES_PORT, useValue: mockFuturesExchange },
+        { provide: EventBus, useValue: { publish: jest.fn() } },
+        { provide: 'LOGGER_PORT', useValue: mockLogger },
+      ],
+    }).compile();
 
     service = module.get<PriceStreamService>(PriceStreamService);
   });
@@ -39,6 +57,13 @@ describe.skip('PriceStreamModule (e2e)', () => {
   afterAll(async () => {
     service.unsubscribeAll();
     await module.close();
+  });
+
+  beforeEach(() => {
+    service.unsubscribeAll();
+    mockSubscribeToTicker.mockClear();
+    mockSpotExchange.subscribeToTicker.mockClear();
+    mockFuturesExchange.subscribeToTicker.mockClear();
   });
 
   describe('Module Integration', () => {
@@ -61,12 +86,9 @@ describe.skip('PriceStreamModule (e2e)', () => {
   });
 
   describe('Subscription Management', () => {
-    beforeEach(() => {
-      service.unsubscribeAll();
-    });
-
     it('should subscribe to symbol', () => {
-      mockSubscribeToTicker.mockReturnValue(jest.fn());
+      const unsubscribe = jest.fn();
+      mockSpotExchange.subscribeToTicker.mockReturnValue(unsubscribe);
 
       const result = service.subscribe('BTCUSDT', jest.fn());
 
@@ -76,7 +98,8 @@ describe.skip('PriceStreamModule (e2e)', () => {
     });
 
     it('should return existing subscription', () => {
-      mockSubscribeToTicker.mockReturnValue(jest.fn());
+      const unsubscribe = jest.fn();
+      mockSpotExchange.subscribeToTicker.mockReturnValue(unsubscribe);
 
       const result1 = service.subscribe('BTCUSDT', jest.fn());
       const result2 = service.subscribe('BTCUSDT', jest.fn());
@@ -85,7 +108,8 @@ describe.skip('PriceStreamModule (e2e)', () => {
     });
 
     it('should track active subscriptions', () => {
-      mockSubscribeToTicker.mockReturnValue(jest.fn());
+      const unsubscribe = jest.fn();
+      mockSpotExchange.subscribeToTicker.mockReturnValue(unsubscribe);
 
       service.subscribe('BTCUSDT', jest.fn());
       service.subscribe('ETHUSDT', jest.fn());
@@ -96,7 +120,7 @@ describe.skip('PriceStreamModule (e2e)', () => {
 
     it('should unsubscribe from symbol', () => {
       const unsubscribe = jest.fn();
-      mockSubscribeToTicker.mockReturnValue(unsubscribe);
+      mockSpotExchange.subscribeToTicker.mockReturnValue(unsubscribe);
 
       service.subscribe('BTCUSDT', jest.fn());
       service.unsubscribe('BTCUSDT');
@@ -107,8 +131,8 @@ describe.skip('PriceStreamModule (e2e)', () => {
     it('should unsubscribe all symbols', () => {
       const unsub1 = jest.fn();
       const unsub2 = jest.fn();
-      mockSubscribeToTicker.mockReturnValueOnce(unsub1);
-      mockSubscribeToTicker.mockReturnValueOnce(unsub2);
+      mockSpotExchange.subscribeToTicker.mockReturnValueOnce(unsub1);
+      mockSpotExchange.subscribeToTicker.mockReturnValueOnce(unsub2);
 
       service.subscribe('BTCUSDT', jest.fn());
       service.subscribe('ETHUSDT', jest.fn());

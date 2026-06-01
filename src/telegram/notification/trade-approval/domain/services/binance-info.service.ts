@@ -1,5 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { BinanceInfoPort, BINANCE_INFO_PORT } from '@price/exchange/domain/ports/binance-info.port';
+import { BinanceInfoPort, BINANCE_INFO_PORT } from '@price/provider/binance/domain/ports/binance-info.port';
 import { TradeSide } from '@trade/shared';
 
 export interface BinanceInfoData {

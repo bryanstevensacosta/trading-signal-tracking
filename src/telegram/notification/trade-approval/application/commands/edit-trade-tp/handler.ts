@@ -33,7 +33,7 @@ export class EditTradeTPHandler implements ICommandHandler<EditTradeTPCommand> {
     const trade = await this.repository.findById(tradeId);
     if (!trade) {
       this.logger.error(`Trade ${tradeId} not found`);
-      await this.telegram.sendMessage(chatId, `❌ Trade not found.`, undefined, telegramConfig.singleTradeThreadId);
+      await this.telegram.sendMessage(chatId, `❌ Trade not found.`, undefined, telegramConfig.tradeAlertsThreadId);
       return;
     }
 
@@ -42,18 +42,18 @@ export class EditTradeTPHandler implements ICommandHandler<EditTradeTPCommand> {
 
     if (action === 'add') {
       if (!value) {
-        await this.telegram.sendMessage(chatId, 'Please provide the TP value.', undefined, telegramConfig.singleTradeThreadId);
+        await this.telegram.sendMessage(chatId, 'Please provide the TP value.', undefined, telegramConfig.tradeAlertsThreadId);
         return;
       }
       const newTP = parseFloat(value);
       if (isNaN(newTP)) {
-        await this.telegram.sendMessage(chatId, 'Invalid TP value.', undefined, telegramConfig.singleTradeThreadId);
+        await this.telegram.sendMessage(chatId, 'Invalid TP value.', undefined, telegramConfig.tradeAlertsThreadId);
         return;
       }
       newTPs = [...currentTPs, newTP];
     } else if (action === 'remove') {
       if (currentTPs.length === 0) {
-        await this.telegram.sendMessage(chatId, 'No TPs to remove.', undefined, telegramConfig.singleTradeThreadId);
+        await this.telegram.sendMessage(chatId, 'No TPs to remove.', undefined, telegramConfig.tradeAlertsThreadId);
         return;
       }
       newTPs = currentTPs.slice(0, -1);
@@ -92,14 +92,14 @@ export class EditTradeTPHandler implements ICommandHandler<EditTradeTPCommand> {
         pendingTrade.confirmationMessageId,
         text,
         { inline_keyboard: inlineButtons },
-        telegramConfig.singleTradeThreadId,
+        telegramConfig.tradeAlertsThreadId,
       );
     } else {
       await this.telegram.sendMessage(
         chatId,
         text,
         { inline_keyboard: inlineButtons },
-        telegramConfig.singleTradeThreadId,
+        telegramConfig.tradeAlertsThreadId,
       );
     }
   }

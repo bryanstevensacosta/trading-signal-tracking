@@ -7,10 +7,11 @@ import { TradeIngestionModule } from './trade/ingestion/trade-ingestion.module';
 import { TradeParsingModule } from './trade/parsing/trade-parsing.module';
 import { TradeRepositoryModule } from './trade/repository/trade-repository.module';
 import { TradeStateModule } from './trade/state/trade-state.module';
-import { PriceExchangeModule } from '@price/exchange/price-exchange.module';
+import { BinanceProviderModule } from '@price/provider/binance/binance.module';
 import { PriceStreamModule } from '@price/stream/price-stream.module';
-import { TradeEngineModule } from './trade/engine/trade-engine.module';
-import { TelegramCommandModule } from '@telegram/command/telegram-command.module';
+import { TriggerModule } from './trade/trigger/trigger.module';
+import { RecoveryModule } from './recovery/recovery.module';
+import { TelegramCommandModule } from '@telegram/cmd/telegram-command.module';
 import { LoggerModule } from './shared/shared.module';
 import { HealthModule } from './health/health.module';
 
@@ -22,7 +23,7 @@ import { HealthModule } from './health/health.module';
   imports: [
     TypeOrmModule.forRoot({
       type: 'better-sqlite3',
-      database: 'crypto-signals.db',
+      database: 'trading-signal-tracker.db',
       entities: [TradeEntity, TelegramNotificationLogEntity],
       synchronize: true,
     }),
@@ -31,9 +32,10 @@ import { HealthModule } from './health/health.module';
     TradeParsingModule,
     TradeRepositoryModule,
     TradeStateModule,
-    PriceExchangeModule,
+    BinanceProviderModule,
     PriceStreamModule,
-    TradeEngineModule,
+    TriggerModule,
+    RecoveryModule,
     TelegramCommandModule,
     HealthModule,
     LoggerModule,

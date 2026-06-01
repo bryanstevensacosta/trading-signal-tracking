@@ -208,7 +208,7 @@ Manejar el flujo interactivo de confirmación de trades cuando el usuario envía
 | Handler | Función |
 |---------|---------|
 | `SendConfirmationHandler` | Crea trade PENDING, obtiene info Binance, envía confirmación |
-| `ApproveTradeHandler` | Cambia a ACTIVE, inicia monitoreo, actualiza notificationMessageId |
+| `ApproveTradeHandler` | Cambia a ACTIVE, inicia monitoreo, actualiza tradeAlertsMessageId |
 | `CancelTradeConfirmationHandler` | Cancela trade pending |
 | `EditTradeFieldHandler` | Actualiza campo (side/entry/sl/tps), re-renderiza mensaje |
 | `EditTradeTPHandler` | Agrega/remove TP |
@@ -354,7 +354,7 @@ Enviar notificaciones automáticas cuando ocurren eventos en trades (TP hit, SL 
 **Acciones:**
 1. Formatea mensaje según trigger
 2. Envía notificación
-3. Actualiza `notificationMessageId` en el trade
+3. Actualiza `tradeAlertsMessageId` en el trade
 
 #### OnTradeModifiedHandler (single-trade)
 **Evento:** `TradeUpdatedEvent` (desde `@trade/shared`)

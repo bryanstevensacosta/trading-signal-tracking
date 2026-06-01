@@ -12,7 +12,10 @@ export interface SubscriptionInfo {
 
 /**
  * Port interface for price streaming.
- * Defines the contract for subscribing to real-time price updates.
+ * Manages real-time price subscriptions via WebSocket.
+ * 
+ * @remarks
+ * For historical data (klines) and current prices, use @price/provider/binance directly.
  */
 export interface PriceStreamPort {
   subscribe(symbol: string, callback: (price: Price) => void, marketType?: MarketType): SubscriptionInfo;
@@ -20,21 +23,4 @@ export interface PriceStreamPort {
   unsubscribeAll(): void;
   getActiveSubscriptions(): string[];
   isSubscribed(symbol: string): boolean;
-  getCurrentPrice(symbol: string, marketType?: MarketType): Promise<Price | null>;
-  getKlines(
-    symbol: string,
-    marketType?: MarketType,
-    interval?: string,
-    startTime?: number,
-    endTime?: number,
-    limit?: number
-  ): Promise<Array<{
-    openTime: number;
-    open: number;
-    high: number;
-    low: number;
-    close: number;
-    volume: number;
-    closeTime: number;
-  }>>;
 }

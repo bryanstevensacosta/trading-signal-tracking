@@ -23,7 +23,7 @@ describe('TradeStatisticsService', () => {
     sourceMessage: 'test',
     sourceChat: 123456,
     tpsHit: [0],
-    notificationMessageId: null,
+    tradeAlertsMessageId: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     closedAt: new Date(),
@@ -138,13 +138,13 @@ describe('TradeStatisticsService', () => {
 
   describe('property-based: RR calculation invariants', () => {
     it('calculateRR should return null when SL equals entry', () => {
-      const trade = createMockTrade({ entry: 50000, sl: 50000 });
+      const trade = createMockTrade({ entry: 50000, sl: 50000, entryExecutedPrice: null });
       const result = service.calculateRR(trade);
       expect(result).toBeNull();
     });
 
     it('calculateRR should return null when risk is zero', () => {
-      const trade = createMockTrade({ entry: 50000, sl: 50000 });
+      const trade = createMockTrade({ entry: 50000, sl: 50000, entryExecutedPrice: 50000 });
       const result = service.calculateRR(trade);
       expect(result).toBeNull();
     });

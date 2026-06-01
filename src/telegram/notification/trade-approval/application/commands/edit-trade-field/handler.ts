@@ -33,7 +33,7 @@ export class EditTradeFieldHandler implements ICommandHandler<EditTradeFieldComm
     const trade = await this.repository.findById(tradeId);
     if (!trade) {
       this.logger.error(`Trade ${tradeId} not found`);
-      await this.telegram.sendMessage(chatId, `❌ Trade not found.`, undefined, telegramConfig.singleTradeThreadId);
+      await this.telegram.sendMessage(chatId, `❌ Trade not found.`, undefined, telegramConfig.tradeAlertsThreadId);
       return;
     }
 

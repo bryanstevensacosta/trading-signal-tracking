@@ -46,7 +46,11 @@ export class HandlerOrchestratorService implements OnModuleInit {
     });
 
     this.adapter.registerCommandHandler('history', async (ctx) => {
-      await this.commandHandler.handleHistory(ctx);
+      const message = ctx.message;
+      if (!message) return;
+      const text = 'text' in message ? message.text : '';
+      const args = text.split(' ').slice(1).join(' ');
+      await this.commandHandler.handleHistory(ctx, args);
     });
 
     this.adapter.registerCommandHandler('stats', async (ctx) => {
@@ -140,6 +144,24 @@ export class HandlerOrchestratorService implements OnModuleInit {
 
     this.adapter.registerCommandHandler('clean', async (ctx) => {
       await this.commandHandler.handleClean(ctx);
+    });
+
+    this.adapter.registerCommandHandler('share_card_position', async (ctx) => {
+      const message = ctx.message;
+      if (!message) return;
+      const text = 'text' in message ? message.text : '';
+      const args = text.split(' ');
+      const tradeId = args[1];
+      await this.commandHandler.handleShareCardPosition(ctx, tradeId);
+    });
+
+    this.adapter.registerCommandHandler('share_card_account', async (ctx) => {
+      const message = ctx.message;
+      if (!message) return;
+      const text = 'text' in message ? message.text : '';
+      const args = text.split(' ');
+      const period = args[1] || '24h';
+      await this.commandHandler.handleShareCardAccount(ctx, period);
     });
 
     //3: Registrar handlers de texto y callback

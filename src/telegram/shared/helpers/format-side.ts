@@ -12,5 +12,5 @@ import { TradeSide } from '@trade/shared';
  * formatSideEmoji('SPOT') // '⚪'
  */
 export function formatSideEmoji(side: TradeSide | string): string {
-  return side === 'LONG' ? '🟢' : side === 'SHORT' ? '🔴' : '⚪';
+  return side === 'LONG' ? '🟢' : side === 'SHORT' ? '🔴' : '🔵';
 }

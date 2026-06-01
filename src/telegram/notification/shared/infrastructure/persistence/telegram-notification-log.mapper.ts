@@ -44,7 +44,7 @@ export class TelegramNotificationLogMapper {
       messageId: log.messageId,
       chatId: log.chatId,
       sentAt: log.sentAt,
-    };
+    } as TelegramNotificationLogEntity;
   }
 
   static toCreateInput(log: Partial<TelegramNotificationLog>): TelegramNotificationLogEntity {
@@ -57,6 +57,6 @@ export class TelegramNotificationLogMapper {
       messageId: log.messageId!,
       chatId: log.chatId || null,
       sentAt: new Date(),
-    };
+    } as TelegramNotificationLogEntity;
   }
 }

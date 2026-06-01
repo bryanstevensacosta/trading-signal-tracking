@@ -1,4 +1,4 @@
-import { TriggerDetectorService, TriggerResult } from '../../src/trade/engine/domain/services/trigger-detector.service';
+import { TriggerDetectorService, TriggerResult } from '../../src/trade/trigger/domain/services/trigger-detector.service';
 import { StateMachineService } from '../../src/trade/state/domain/services/state-machine.service';
 import { Trade, TradeStatus, TradeSide, Price, OrderType } from '../../src/trade/shared';
 
@@ -23,7 +23,7 @@ describe('Trade Recovery & Order Types (e2e)', () => {
     sourceMessage: 'test',
     sourceChat: null,
     tpsHit: [],
-    notificationMessageId: null,
+    tradeAlertsMessageId: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     closedAt: null,
@@ -40,8 +40,15 @@ describe('Trade Recovery & Order Types (e2e)', () => {
     ...overrides,
   });
 
+  const mockLogger = {
+    debug: jest.fn(),
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+  };
+
   beforeAll(() => {
-    triggerDetector = new TriggerDetectorService();
+    triggerDetector = new TriggerDetectorService(mockLogger as any);
     stateMachine = new StateMachineService();
   });
 
@@ -53,7 +60,7 @@ describe('Trade Recovery & Order Types (e2e)', () => {
           entryExecutedAt: new Date('2026-05-24T06:00:00'),
           entryExecutedPrice: 48000,
         });
-        const price = createPrice({ ask: 49000 });
+        const price = createPrice({ ask: 49000, last: 49000 });
 
         const result = triggerDetector.checkEntryHit(trade, price);
 
@@ -65,7 +72,7 @@ describe('Trade Recovery & Order Types (e2e)', () => {
           orderType: OrderType.MARKET,
           status: TradeStatus.PENDING,
         });
-        const price = createPrice({ ask: 50000 });
+        const price = createPrice({ ask: 50000, last: 50000 });
 
         const result = triggerDetector.checkEntryHit(trade, price);
 
@@ -76,7 +83,7 @@ describe('Trade Recovery & Order Types (e2e)', () => {
 
       it('should skip non-pending trade', () => {
         const trade = createTrade({ status: TradeStatus.ACTIVE });
-        const price = createPrice({ ask: 50000 });
+        const price = createPrice({ ask: 50000, last: 50000 });
 
         const result = triggerDetector.checkEntryHit(trade, price);
 
@@ -88,10 +95,10 @@ describe('Trade Recovery & Order Types (e2e)', () => {
       it('should trigger when price is better than entry (LONG lower is better)', () => {
         const trade = createTrade({
           entry: 50000,
-          entryMax: 50100,
+          entryMax: 51000,
           side: TradeSide.LONG,
         });
-        const price = createPrice({ ask: 45000 });
+        const price = createPrice({ ask: 50000, last: 50000 });
 
         const result = triggerDetector.checkEntryHit(trade, price);
 
@@ -101,10 +108,10 @@ describe('Trade Recovery & Order Types (e2e)', () => {
       it('should trigger when price is better than entry (SHORT higher is better)', () => {
         const trade = createTrade({
           entry: 50000,
-          entryMax: 49900,
+          entryMax: 49000,
           side: TradeSide.SHORT,
         });
-        const price = createPrice({ bid: 55000 });
+        const price = createPrice({ bid: 50000, last: 50000 });
 
         const result = triggerDetector.checkEntryHit(trade, price);
 
@@ -117,7 +124,7 @@ describe('Trade Recovery & Order Types (e2e)', () => {
           entryMax: 50100,
           side: TradeSide.LONG,
         });
-        const price = createPrice({ ask: 51000 });
+        const price = createPrice({ ask: 51000, last: 51000 });
 
         const result = triggerDetector.checkEntryHit(trade, price);
 
@@ -130,7 +137,7 @@ describe('Trade Recovery & Order Types (e2e)', () => {
           entryMax: 49900,
           side: TradeSide.SHORT,
         });
-        const price = createPrice({ bid: 49000 });
+        const price = createPrice({ bid: 49000, last: 49000 });
 
         const result = triggerDetector.checkEntryHit(trade, price);
 
@@ -143,7 +150,7 @@ describe('Trade Recovery & Order Types (e2e)', () => {
           entryMax: 51000,
           side: TradeSide.LONG,
         });
-        const price = createPrice({ ask: 51500 });
+        const price = createPrice({ ask: 51500, last: 51500 });
 
         const result = triggerDetector.checkEntryHit(trade, price);
 
@@ -156,7 +163,7 @@ describe('Trade Recovery & Order Types (e2e)', () => {
           entryMax: 49000,
           side: TradeSide.SHORT,
         });
-        const price = createPrice({ bid: 48500 });
+        const price = createPrice({ bid: 48500, last: 48500 });
 
         const result = triggerDetector.checkEntryHit(trade, price);
 
@@ -171,7 +178,7 @@ describe('Trade Recovery & Order Types (e2e)', () => {
           entryMax: 50100,
           side: TradeSide.LONG,
         });
-        const price = createPrice({ ask: 50050 });
+        const price = createPrice({ ask: 50050, last: 50050 });
 
         const result = triggerDetector.checkEntryHit(trade, price);
 
@@ -185,7 +192,7 @@ describe('Trade Recovery & Order Types (e2e)', () => {
           entryMax: 49900,
           side: TradeSide.SHORT,
         });
-        const price = createPrice({ bid: 49950 });
+        const price = createPrice({ bid: 49950, last: 49950 });
 
         const result = triggerDetector.checkEntryHit(trade, price);
 
@@ -199,7 +206,7 @@ describe('Trade Recovery & Order Types (e2e)', () => {
           entryMax: 50000,
           side: TradeSide.LONG,
         });
-        const price = createPrice({ ask: 50000 });
+        const price = createPrice({ ask: 50000, last: 50000 });
 
         const result = triggerDetector.checkEntryHit(trade, price);
 
@@ -215,7 +222,7 @@ describe('Trade Recovery & Order Types (e2e)', () => {
           side: TradeSide.LONG,
           orderType: OrderType.LIMIT,
         });
-        const price = createPrice({ ask: 49500 });
+        const price = createPrice({ ask: 49500, last: 49500 });
 
         const result = triggerDetector.checkEntryHit(trade, price);
 
@@ -229,7 +236,7 @@ describe('Trade Recovery & Order Types (e2e)', () => {
           side: TradeSide.SHORT,
           orderType: OrderType.LIMIT,
         });
-        const price = createPrice({ bid: 50500 });
+        const price = createPrice({ bid: 50500, last: 50500 });
 
         const result = triggerDetector.checkEntryHit(trade, price);
 
@@ -243,7 +250,7 @@ describe('Trade Recovery & Order Types (e2e)', () => {
           side: TradeSide.LONG,
           orderType: OrderType.LIMIT,
         });
-        const price = createPrice({ ask: 50500 });
+        const price = createPrice({ ask: 50500, last: 50500 });
 
         const result = triggerDetector.checkEntryHit(trade, price);
 
@@ -256,7 +263,7 @@ describe('Trade Recovery & Order Types (e2e)', () => {
           side: TradeSide.SHORT,
           orderType: OrderType.LIMIT,
         });
-        const price = createPrice({ bid: 49500 });
+        const price = createPrice({ bid: 49500, last: 49500 });
 
         const result = triggerDetector.checkEntryHit(trade, price);
 
@@ -345,7 +352,7 @@ describe('Trade Recovery & Order Types (e2e)', () => {
         entryExecutedAt: null,
       });
 
-      const price = createPrice({ ask: 50050 });
+      const price = createPrice({ ask: 50050, last: 50050 });
       const entryHit = triggerDetector.checkEntryHit(trade, price);
 
       expect(entryHit.triggered).toBe(true);
@@ -368,7 +375,7 @@ describe('Trade Recovery & Order Types (e2e)', () => {
         entryExecutedPrice: 49000,
       });
 
-      const price = createPrice({ ask: 50000 });
+      const price = createPrice({ last: 50000 });
       const entryHit = triggerDetector.checkEntryHit(trade, price);
 
       expect(entryHit.triggered).toBe(true);
@@ -385,7 +392,7 @@ describe('Trade Recovery & Order Types (e2e)', () => {
         entryExecutedAt: null,
       });
 
-      const price = createPrice({ ask: 51000 });
+      const price = createPrice({ last: 51000 });
       const entryHit = triggerDetector.checkEntryHit(trade, price);
 
       expect(entryHit.triggered).toBe(false);
@@ -401,7 +408,7 @@ describe('Trade Recovery & Order Types (e2e)', () => {
         entryExecutedAt: null,
       });
 
-      const price = createPrice({ ask: 49500 });
+      const price = createPrice({ ask: 49500, last: 49500 });
       const entryHit = triggerDetector.checkEntryHit(trade, price);
 
       expect(entryHit.triggered).toBe(true);
@@ -419,7 +426,7 @@ describe('Trade Recovery & Order Types (e2e)', () => {
         entryExecutedAt: null,
       });
 
-      const price = createPrice({ bid: 50500 });
+      const price = createPrice({ bid: 50500, last: 50500 });
       const entryHit = triggerDetector.checkEntryHit(trade, price);
 
       expect(entryHit.triggered).toBe(true);
@@ -438,7 +445,7 @@ describe('Trade Recovery & Order Types (e2e)', () => {
         entryExecutedAt: null,
       });
 
-      const price = createPrice({ ask: 50050 });
+      const price = createPrice({ ask: 50050, last: 50050 });
       const entryHit = triggerDetector.checkEntryHit(trade, price);
 
       expect(entryHit.triggered).toBe(true);
@@ -455,9 +462,9 @@ describe('Trade Recovery & Order Types (e2e)', () => {
       ];
 
       const prices = [
-        createPrice({ symbol: 'BTCUSDT', ask: 50050 }),
-        createPrice({ symbol: 'ETHUSDT', ask: 2990 }),
-        createPrice({ symbol: 'BNBUSDT', bid: 105 }),
+        createPrice({ symbol: 'BTCUSDT', ask: 50050, last: 50050 }),
+        createPrice({ symbol: 'ETHUSDT', ask: 2990, last: 2990 }),
+        createPrice({ symbol: 'BNBUSDT', bid: 105, last: 105 }),
       ];
 
       const results = trades.map((trade, i) => {
@@ -478,7 +485,7 @@ describe('Trade Recovery & Order Types (e2e)', () => {
         createTrade({ id: 'trade-4', entry: 50000, side: TradeSide.LONG, orderType: OrderType.LIMIT, entryMax: 50100 }),
       ];
 
-      const price = createPrice({ ask: 50050 });
+      const price = createPrice({ ask: 50050, last: 50050 });
 
       const results = trades.map(trade => triggerDetector.checkEntryHit(trade, price));
 

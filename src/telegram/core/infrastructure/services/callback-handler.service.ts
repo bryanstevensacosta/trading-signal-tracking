@@ -10,8 +10,8 @@ import { ApproveTradeCommand } from '../../../notification/trade-approval/applic
 import { CancelTradeConfirmationCommand } from '../../../notification/trade-approval/application/commands/cancel-trade/command';
 import { EditTradeFieldCommand } from '../../../notification/trade-approval/application/commands/edit-trade-field/command';
 import { EditTradeTPCommand } from '../../../notification/trade-approval/application/commands/edit-trade-tp/command';
-import { CleanDatabaseCommand } from '../../../command/mutation/application/commands';
-import { CommandResponse } from '../../../command/application/command-response';
+import { CleanDatabaseCommand } from '../../../cmd/mutation/application/commands';
+import { CommandResponse } from '../../../cmd/application/command-response';
 
 @Injectable()
 export class CallbackHandlerService {
@@ -83,7 +83,7 @@ export class CallbackHandlerService {
   ): Promise<void> {
     if (data.startsWith('confirm_approve:')) {
       this.logger.info(`Trade approved: ${tradeId}`);
-      await this.commandBus.execute(new ApproveTradeCommand(tradeId, chatId));
+      await this.commandBus.execute(new ApproveTradeCommand(tradeId, chatId, messageId));
       await ctx.answerCbQuery('Trade approved! Monitoring started.');
     } else if (data.startsWith('confirm_cancel:')) {
       this.logger.info(`Trade cancelled: ${tradeId}`);

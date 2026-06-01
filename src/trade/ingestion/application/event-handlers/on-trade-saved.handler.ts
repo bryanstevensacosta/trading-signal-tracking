@@ -3,7 +3,7 @@ import { Inject } from '@nestjs/common';
 import { TradeSavedEvent } from '../../domain/events/trade-saved.event';
 import { TradeAlertService } from '@telegram/notification/trade-alerts/domain/services/trade-alert.service';
 import { TELEGRAM_PORT, TelegramPort } from '@telegram/core';
-import { TradingEngineService } from '../../../engine/domain/services/trading-engine.service';
+import { TriggerOrchestratorService } from '../../../trigger/domain/services/trigger-orchestrator.service';
 import { getTelegramConfig } from '@config/telegram.config';
 import { LoggerPort, LOGGER_PORT } from '../../../../shared/domain/ports/logger.port';
 
@@ -17,7 +17,7 @@ export class OnTradeSavedHandler implements IEventHandler<TradeSavedEvent> {
   constructor(
     private readonly templates: TradeAlertService,
     @Inject(TELEGRAM_PORT) private readonly telegram: TelegramPort,
-    private readonly engine: TradingEngineService,
+    private readonly engine: TriggerOrchestratorService,
     @Inject(LOGGER_PORT) logger: LoggerPort,
   ) {
     this.logger = logger;
@@ -41,7 +41,7 @@ export class OnTradeSavedHandler implements IEventHandler<TradeSavedEvent> {
         telegramConfig.groupId,
         message,
         undefined,
-        telegramConfig.singleTradeThreadId,
+        telegramConfig.tradeAlertsThreadId,
       );
       this.logger.debug(`Group notification sent for trade ${trade.id}`);
     } catch (error) {

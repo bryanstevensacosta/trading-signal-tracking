@@ -22,7 +22,7 @@ export class CommandRouterService {
   }
 
   route(command: ParsedCommand): { type: 'query' | 'mutation'; name: string; args: string[] } | null {
-    const queryCommands = ['start', 'help', 'trades', 'active', 'history', 'stats', 'trade', 'price'];
+    const queryCommands = ['start', 'help', 'trades', 'active', 'history', 'stats', 'trade', 'price', 'share_card_position', 'share_card_account'];
     const mutationCommands = ['cancel', 'delete', 'entry', 'sl', 'tp', 'close', 'open', 'be'];
 
     if (queryCommands.includes(command.name)) {
