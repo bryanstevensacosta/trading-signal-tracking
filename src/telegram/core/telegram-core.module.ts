@@ -5,7 +5,8 @@ import { TELEGRAM_PORT } from './domain/ports/telegram.port';
 import { CommandHandlerService, TextHandlerService, CallbackHandlerService, HandlerOrchestratorService } from './infrastructure/services';
 import { CommandRouterService } from './domain/services/command-router.service';
 import { TradeValidationService } from '@trade/domain';
-import { TelegramFormatter } from '../shared/formatters';
+import { TelegramFormatter, TradeSelectionListFormatter, TradeDetailFormatter } from '../shared/formatters';
+import { TradeSelectionStateManager } from '../shared/domain/services';
 import { TradeRepositoryModule } from '@trade/repository/trade-repository.module';
 import { TradeHistoryModule } from '@trade/history/trade-history.module';
 import { TradeStatisticsModule } from '@trade/statistics/trade-statistics.module';
@@ -43,6 +44,9 @@ const CommandHandlers = [
     CommandRouterService,
     TradeValidationService,
     TelegramFormatter,
+    TradeSelectionListFormatter,
+    TradeDetailFormatter,
+    TradeSelectionStateManager,
     ...CommandHandlers,
   ],
   exports: [

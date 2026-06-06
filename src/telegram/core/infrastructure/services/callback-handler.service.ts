@@ -8,10 +8,15 @@ import { BinanceInfoService } from '../../../notification/trade-approval/domain/
 import { TradeApprovalService } from '../../../notification/trade-approval/domain/services/confirmation-template.service';
 import { ApproveTradeCommand } from '../../../notification/trade-approval/application/commands/approve-trade/command';
 import { CancelTradeConfirmationCommand } from '../../../notification/trade-approval/application/commands/cancel-trade/command';
+import { CloseTradeConfirmationCommand } from '../../../notification/trade-approval/application/commands/close-trade/command';
 import { EditTradeFieldCommand } from '../../../notification/trade-approval/application/commands/edit-trade-field/command';
 import { EditTradeTPCommand } from '../../../notification/trade-approval/application/commands/edit-trade-tp/command';
 import { CleanDatabaseCommand } from '../../../cmd/mutation/application/commands';
 import { CommandResponse } from '../../../cmd/application/command-response';
+import { TradeSelectionStateManager } from '@telegram/shared/domain/services';
+import { TradeDetailFormatter } from '@telegram/shared/formatters/trade-detail-formatter.service';
+import { TradeSelectionListFormatter } from '@telegram/shared/formatters/trade-selection-list-formatter.service';
+import { GetTradesForSelectionQuery } from '@trade/repository/application/queries/get-trades-for-selection';
 
 @Injectable()
 export class CallbackHandlerService {
@@ -24,12 +29,13 @@ export class CallbackHandlerService {
     @Inject(TRADE_REPOSITORY_PORT) private readonly repository: TradeRepositoryPort,
     private readonly binanceInfoService: BinanceInfoService,
     private readonly confirmationTemplate: TradeApprovalService,
+    private readonly selectionStateManager: TradeSelectionStateManager,
+    private readonly detailFormatter: TradeDetailFormatter,
     @Inject(LOGGER_PORT) logger: LoggerPort,
   ) {
     this.logger = logger;
   }
 
-  // Maneja callbacks de botones inline
   async handle(ctx: Context): Promise<void> {
     const query = ctx.callbackQuery;
     if (!query || !('data' in query)) {
@@ -47,12 +53,9 @@ export class CallbackHandlerService {
 
     this.logger.debug(`Callback query: ${data} from chat ${chatId}`);
 
-    // Clean database confirmation
     if (data === 'confirm_clean') {
       this.logger.info(`Cleaning database for chat ${chatId}`);
-      const result = await this.commandBus.execute(
-        new CleanDatabaseCommand(chatId),
-      ) as CommandResponse;
+      const result = await this.commandBus.execute(new CleanDatabaseCommand(chatId)) as CommandResponse;
       await ctx.answerCbQuery('Database cleaned');
       await ctx.reply(result.message);
       return;
@@ -62,18 +65,53 @@ export class CallbackHandlerService {
       return;
     }
 
-    // Extract trade ID from callback data
+    if (data.startsWith('sel_page:')) {
+      const page = parseInt(data.split(':')[1], 10);
+      const pageInfo = this.selectionStateManager.getSelectionPage(chatId);
+      if (pageInfo) {
+        await ctx.answerCbQuery();
+        await this.handleSelectionPage(ctx, chatId, page, pageInfo.messageId);
+      } else {
+        await ctx.answerCbQuery('Selection expired, use /trade-edit again');
+      }
+      return;
+    }
+
+    if (data === 'noop') {
+      await ctx.answerCbQuery();
+      return;
+    }
+
+    if (data.startsWith('sel_back:')) {
+      await ctx.answerCbQuery();
+      await this.handleBackToDetail(ctx, chatId, data.split(':')[1]);
+      return;
+    }
+
+    if (data.startsWith('sel_confirm:')) {
+      const parts = data.split(':');
+      const action = parts[1];
+      const id = parts[2];
+      await ctx.answerCbQuery();
+      await this.handleSelectionConfirm(ctx, action, id, chatId);
+      return;
+    }
+
+    if (data.startsWith('sel_cancel:') || data.startsWith('sel_close:') || data.startsWith('sel_edit:')) {
+      await ctx.answerCbQuery();
+      await this.handleSelectionAction(ctx, data, chatId);
+      return;
+    }
+
     const tradeId = this.extractTradeId(data);
     if (!tradeId) {
       await ctx.answerCbQuery('Invalid trade ID');
       return;
     }
 
-    // Handle approve/cancel/edit actions
     await this.handleAction(ctx, data, tradeId, chatId, messageId);
   }
 
-  // Maneja acciones específicas
   private async handleAction(
     ctx: Context,
     data: string,
@@ -110,13 +148,129 @@ export class CallbackHandlerService {
     }
   }
 
-  // Modo edición - muestra botones para modificar campos
-  private async handleEditMode(
-    ctx: Context,
-    tradeId: string,
-    chatId: number,
-    _messageId?: number,
-  ): Promise<void> {
+  private async handleSelectionPage(ctx: Context, chatId: number, page: number, listMessageId: number): Promise<void> {
+    const result = await this.commandBus.execute(new GetTradesForSelectionQuery(page, 5)) as { trades: any[]; total: number; page: number; totalPages: number };
+
+    const formatter = new TradeSelectionListFormatter();
+    const formatted = formatter.formatList(result.trades, page);
+
+    const navigationButtons: any[][] = [];
+    if (formatted.hasPrev || formatted.hasNext) {
+      const navRow: any[] = [];
+      if (formatted.hasPrev) {
+        navRow.push({ text: '◀', callback_data: `sel_page:${page - 1}` });
+      }
+      navRow.push({ text: `${page}/${formatted.navigation.total}`, callback_data: 'noop' });
+      if (formatted.hasNext) {
+        navRow.push({ text: '▶', callback_data: `sel_page:${page + 1}` });
+      }
+      navigationButtons.push(navRow);
+    }
+
+    const message = `${formatted.header}\n\n${formatted.items.join('\n\n')}`;
+
+    await ctx.telegram.editMessageText(chatId, listMessageId, undefined, message, {
+      parse_mode: 'HTML',
+      reply_markup: { inline_keyboard: navigationButtons },
+    });
+
+    this.selectionStateManager.setSelectionPage(chatId, page, formatted.navigation.total, formatted.navigation.total, listMessageId);
+  }
+
+  private async handleBackToDetail(ctx: Context, chatId: number, tradeId: string): Promise<void> {
+    const state = this.selectionStateManager.getSelectionState(chatId);
+    if (!state) {
+      await ctx.reply('Session expired, use /trade-edit again');
+      return;
+    }
+
+    const trade = await this.repository.findById(tradeId);
+    if (!trade) {
+      await ctx.reply('Trade not found');
+      return;
+    }
+
+    const detail = this.detailFormatter.formatDetail(trade);
+    await ctx.telegram.editMessageText(chatId, state.messageId, undefined, detail.text, {
+      parse_mode: 'HTML',
+      reply_markup: { inline_keyboard: detail.buttons },
+    });
+  }
+
+  private async handleSelectionAction(ctx: Context, data: string, chatId: number): Promise<void> {
+    const state = this.selectionStateManager.getSelectionState(chatId);
+    if (!state) {
+      await ctx.reply('Session expired, use /trade-edit again');
+      return;
+    }
+
+    let action: string;
+    let tradeId: string;
+    let field: string = 'sl';
+
+    if (data.startsWith('sel_cancel:')) {
+      action = 'cancel';
+      tradeId = data.split(':')[1];
+    } else if (data.startsWith('sel_close:')) {
+      action = 'close';
+      tradeId = data.split(':')[1];
+    } else if (data.startsWith('sel_edit:')) {
+      const parts = data.split(':');
+      tradeId = parts[1];
+      field = parts[2];
+      action = `edit_${field}`;
+    } else {
+      return;
+    }
+
+    const trade = await this.repository.findById(tradeId);
+    if (!trade) {
+      await ctx.reply('Trade not found');
+      return;
+    }
+
+    if (action === 'cancel' || action === 'close') {
+      const confirmation = this.detailFormatter.formatConfirmation(action, trade);
+      await ctx.telegram.editMessageText(chatId, state.messageId, undefined, confirmation.text, {
+        parse_mode: 'HTML',
+        reply_markup: { inline_keyboard: confirmation.buttons },
+      });
+    } else if (action.startsWith('edit_')) {
+      const editField = field || 'sl';
+      const prompt = this.detailFormatter.formatEditPrompt(trade, editField);
+      await ctx.telegram.editMessageText(chatId, state.messageId, undefined, prompt, {
+        parse_mode: 'HTML',
+        reply_markup: {
+          inline_keyboard: [[{ text: '◀ Back', callback_data: `sel_back:${tradeId}` }]],
+        },
+      });
+      this.editStateManager.startEditing(chatId, tradeId, state.messageId, editField);
+    }
+  }
+
+  private async handleSelectionConfirm(ctx: Context, action: string, tradeId: string, chatId: number): Promise<void> {
+    const state = this.selectionStateManager.getSelectionState(chatId);
+    if (!state) {
+      await ctx.reply('Session expired, use /trade-edit again');
+      return;
+    }
+
+    try {
+      if (action === 'cancel') {
+        await this.commandBus.execute(new CancelTradeConfirmationCommand(tradeId, chatId));
+        await ctx.telegram.editMessageText(chatId, state.messageId, undefined, `❌ Trade ${tradeId} cancelled.`, {});
+      } else if (action === 'close') {
+        await this.commandBus.execute(new CloseTradeConfirmationCommand(tradeId, chatId));
+        await ctx.telegram.editMessageText(chatId, state.messageId, undefined, `🔴 Trade ${tradeId} closed.`, {});
+      }
+      this.selectionStateManager.clearSelectionState(chatId);
+    } catch (error) {
+      this.logger.error(`Error ${action}ing trade: ${error}`);
+      await ctx.reply(`Failed to ${action} trade. Please try again.`);
+    }
+  }
+
+  private async handleEditMode(ctx: Context, tradeId: string, chatId: number, _messageId?: number): Promise<void> {
     const pendingTrade = this.editStateManager.getPendingTrade(chatId, tradeId);
     if (!pendingTrade) {
       await ctx.answerCbQuery('Trade session expired, please send a new trade');
@@ -162,14 +316,7 @@ export class CallbackHandlerService {
     }
   }
 
-  // Iniciar edición de campo
-  private handleEditField(
-    ctx: Context,
-    field: string,
-    tradeId: string,
-    chatId: number,
-    messageId?: number,
-  ): void {
+  private handleEditField(ctx: Context, field: string, tradeId: string, chatId: number, messageId?: number): void {
     const pendingTrade = this.editStateManager.getPendingTrade(chatId, tradeId);
     if (messageId) {
       this.editStateManager.startEditing(chatId, tradeId, messageId, field, pendingTrade?.confirmationMessageId);
@@ -184,7 +331,6 @@ export class CallbackHandlerService {
     ctx.answerCbQuery(messages[field] || 'Enter new value');
   }
 
-  // Set side directamente desde botón
   private async handleSetSide(ctx: Context, data: string, tradeId: string, chatId: number): Promise<void> {
     const parts = data.split(':');
     const side = parts[1];
@@ -192,13 +338,11 @@ export class CallbackHandlerService {
     await ctx.answerCbQuery(`Side set to ${side}`);
   }
 
-  // Remover último TP
   private async handleRemoveTP(ctx: Context, data: string, tradeId: string, chatId: number): Promise<void> {
     await this.commandBus.execute(new EditTradeTPCommand(tradeId, 'remove', chatId));
     await ctx.answerCbQuery('Last TP removed');
   }
 
-  // Extraer trade ID de callback data
   private extractTradeId(data: string): string | null {
     const patterns = [
       /^confirm_approve:(.+)$/,
@@ -211,6 +355,11 @@ export class CallbackHandlerService {
       /^set_side:\w+:(.+)$/,
       /^edit_tp_add:(.+)$/,
       /^edit_tp_remove:(.+)$/,
+      /^sel_cancel:(.+)$/,
+      /^sel_close:(.+)$/,
+      /^sel_edit:(.+)$/,
+      /^sel_back:(.+)$/,
+      /^sel_confirm:\w+:(.+)$/,
     ];
 
     for (const pattern of patterns) {

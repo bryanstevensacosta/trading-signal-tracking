@@ -23,11 +23,9 @@ export class HandlerOrchestratorService implements OnModuleInit {
   }
 
   async onModuleInit(): Promise<void> {
-    // Registrar todos los comandos en el adapter
     this.registerCommands();
   }
 
-  // Registrar handlers de comandos
   private registerCommands(): void {
     this.adapter.registerCommandHandler('start', async (ctx) => {
       await this.commandHandler.handleStart(ctx);
@@ -57,89 +55,13 @@ export class HandlerOrchestratorService implements OnModuleInit {
       await this.commandHandler.handleStats(ctx);
     });
 
-    this.adapter.registerCommandHandler('trade', async (ctx) => {
+    this.adapter.registerCommandHandler('trade_edit', async (ctx) => {
       const message = ctx.message;
       if (!message) return;
       const text = 'text' in message ? message.text : '';
       const args = text.split(' ');
       const tradeId = args[1];
       await this.commandHandler.handleTrade(ctx, tradeId);
-    });
-
-    this.adapter.registerCommandHandler('cancel', async (ctx) => {
-      const message = ctx.message;
-      if (!message) return;
-      const text = 'text' in message ? message.text : '';
-      const args = text.split(' ');
-      const tradeId = args[1];
-      await this.commandHandler.handleCancel(ctx, tradeId, ctx.chat?.id || 0);
-    });
-
-    this.adapter.registerCommandHandler('delete', async (ctx) => {
-      const message = ctx.message;
-      if (!message) return;
-      const text = 'text' in message ? message.text : '';
-      const args = text.split(' ');
-      const tradeId = args[1];
-      await this.commandHandler.handleDelete(ctx, tradeId, ctx.chat?.id || 0);
-    });
-
-    this.adapter.registerCommandHandler('entry', async (ctx) => {
-      const message = ctx.message;
-      if (!message) return;
-      const text = 'text' in message ? message.text : '';
-      const args = text.split(' ');
-      const tradeId = args[1];
-      const newEntry = parseFloat(args[2]);
-      await this.commandHandler.handleEntry(ctx, tradeId, newEntry, ctx.chat?.id || 0);
-    });
-
-    this.adapter.registerCommandHandler('sl', async (ctx) => {
-      const message = ctx.message;
-      if (!message) return;
-      const text = 'text' in message ? message.text : '';
-      const args = text.split(' ');
-      const tradeId = args[1];
-      const newSL = parseFloat(args[2]);
-      await this.commandHandler.handleSL(ctx, tradeId, newSL, ctx.chat?.id || 0);
-    });
-
-    this.adapter.registerCommandHandler('tp', async (ctx) => {
-      const message = ctx.message;
-      if (!message) return;
-      const text = 'text' in message ? message.text : '';
-      const args = text.split(' ');
-      const tradeId = args[1];
-      const tpNum = parseInt(args[2] || '0', 10);
-      const newTP = parseFloat(args[3]);
-      await this.commandHandler.handleTP(ctx, tradeId, tpNum, newTP, ctx.chat?.id || 0);
-    });
-
-    this.adapter.registerCommandHandler('close', async (ctx) => {
-      const message = ctx.message;
-      if (!message) return;
-      const text = 'text' in message ? message.text : '';
-      const args = text.split(' ');
-      const tradeId = args[1];
-      await this.commandHandler.handleClose(ctx, tradeId, ctx.chat?.id || 0);
-    });
-
-    this.adapter.registerCommandHandler('be', async (ctx) => {
-      const message = ctx.message;
-      if (!message) return;
-      const text = 'text' in message ? message.text : '';
-      const args = text.split(' ');
-      const tradeId = args[1];
-      await this.commandHandler.handleBE(ctx, tradeId, ctx.chat?.id || 0);
-    });
-
-    this.adapter.registerCommandHandler('open', async (ctx) => {
-      const message = ctx.message;
-      if (!message) return;
-      const text = 'text' in message ? message.text : '';
-      const args = text.split(' ');
-      const tradeId = args[1];
-      await this.commandHandler.handleOpen(ctx, tradeId, ctx.chat?.id || 0);
     });
 
     this.adapter.registerCommandHandler('clean', async (ctx) => {
@@ -164,7 +86,6 @@ export class HandlerOrchestratorService implements OnModuleInit {
       await this.commandHandler.handleShareCardAccount(ctx, period);
     });
 
-    //3: Registrar handlers de texto y callback
     this.adapter.setTextHandler(async (ctx) => {
       await this.textHandler.handle(ctx);
     });

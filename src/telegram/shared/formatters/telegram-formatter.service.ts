@@ -23,13 +23,8 @@ const MESSAGE_TEMPLATES = {
   /price [symbol] - Show current price
 
   ✏️ Mutation Commands:
-  /cancel [id] - Cancel pending trade
-  /delete [id] - Delete closed trade
-  /entry [id] [price] - Modify entry price
-  /sl [id] [price] - Modify stop loss
-  /tp [id] [n] [price] - Modify take profit
-  /close [id] - Manually close trade
-  /be [id] - Move to breakeven
+  /trade_edit - Edit trade (select from list or specify ID)
+  /clean - Delete all trades from database
   `.trim(),
 
   WELCOME: `

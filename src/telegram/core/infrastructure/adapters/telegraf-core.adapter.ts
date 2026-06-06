@@ -52,21 +52,18 @@ export class TelegrafCoreAdapter implements TelegramPort, OnModuleInit, OnModule
       { command: 'active', description: 'Show active trades' },
       { command: 'history', description: 'Show trade history' },
       { command: 'stats', description: 'Show trading statistics' },
-      { command: 'cancel', description: 'Cancel a trade (Usage: /cancel trade_id)' },
-      { command: 'delete', description: 'Delete a trade (Usage: /delete trade_id)' },
-      { command: 'entry', description: 'Modify entry price (Usage: /entry id price)' },
-      { command: 'sl', description: 'Modify stop loss (Usage: /sl id price)' },
-      { command: 'tp', description: 'Modify take profit (Usage: /tp id tp_num price)' },
-      { command: 'close', description: 'Close a trade (Usage: /close trade_id)' },
-      { command: 'be', description: 'Move to breakeven (Usage: /be trade_id)' },
-      { command: 'open', description: 'Force open a trade (Usage: /open trade_id)' },
-      { command: 'trade', description: 'Get trade by ID (Usage: /trade trade_id)' },
+      { command: 'trade_edit', description: 'Edit trade (Usage: /trade_edit or /trade_edit trade_id)' },
       { command: 'clean', description: 'Delete all trades from database' },
       { command: 'share_card_position', description: 'Share card PNL by position (Usage: /share_card_position trade_id)' },
       { command: 'share_card_account', description: 'Share card PNL by account (Usage: /share_card_account 24h|7d|30d|all)' },
     ];
 
     try {
+      this.logger.info('Deleting existing bot commands...');
+      await this.bot.telegram.deleteMyCommands();
+      this.logger.info('Existing commands deleted');
+
+      this.logger.info('Setting new bot commands:', JSON.stringify(commands));
       await this.bot.telegram.setMyCommands(commands);
       this.logger.info('Bot commands registered successfully');
     } catch (error) {
